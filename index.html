@@ -181,8 +181,8 @@ async function estimateNutrition(text) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
-      system: 'Nutrition expert. Return ONLY valid JSON, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"food name in Russian max 35 chars"}',
+      max_tokens: 1024,
+      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the food described.',
       messages: [{ role: "user", content: text }]
     })
   });
@@ -193,7 +193,8 @@ async function estimateNutrition(text) {
   const data = await res.json();
   const raw = data.content?.find(b => b.type === "text")?.text || "{}";
   try {
-    const n = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const match = raw.match(/\{[\s\S]*\}/);
+    const n = JSON.parse(match ? match[0] : "{}");
     return {
       kcal:    Math.max(0, Number(n.kcal)    || 0),
       protein: Math.max(0, Number(n.protein) || 0),
