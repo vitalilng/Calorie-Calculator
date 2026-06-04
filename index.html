@@ -14,7 +14,7 @@ html,body{height:100%;background:#0a0a0a;color:#f0f0f0;font-family:'DM Sans',san
 ::-webkit-scrollbar{width:0}
 input,textarea{outline:none;font-family:inherit}
 button{font-family:inherit;cursor:pointer}
-#app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+#app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
 
 /* Header */
 #header{padding:20px 20px 14px;border-bottom:1px solid #1a1a1a;position:sticky;top:0;background:#0a0a0a;z-index:10}
@@ -22,32 +22,34 @@ button{font-family:inherit;cursor:pointer}
 #date-label{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
 #title{font-size:22px;font-weight:600;letter-spacing:-.02em}
 #gear-btn{background:none;border:none;color:#444;font-size:20px;padding:4px 8px;margin-top:4px}
-
-/* Kcal row */
 #kcal-row{display:flex;justify-content:space-between;align-items:flex-end;margin:14px 0 8px}
 #kcal-num{font-size:34px;font-weight:600;font-family:'DM Mono',monospace;color:#f59e0b}
 #kcal-unit{font-size:14px;color:#555}
 #goal-info{text-align:right}
 #goal-label{font-size:11px;color:#555;margin-bottom:2px}
 #remaining{font-size:13px;font-weight:600}
-
-/* Progress bar */
 #prog-track{height:3px;background:#1a1a1a;border-radius:2px;overflow:hidden}
 #prog-fill{height:100%;border-radius:2px;transition:width .5s ease,background .3s}
-
-/* Macros */
 #macros{display:flex;gap:8px;margin-top:10px}
 .macro-card{flex:1;background:#111;border-radius:10px;padding:8px 10px;border:1px solid #1a1a1a}
 .macro-lbl{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .macro-val{font-size:15px;font-weight:600;font-family:'DM Mono',monospace}
 
-/* List */
-#list{flex:1;overflow-y:auto;padding:12px 20px 140px}
+/* Bottom nav */
+#bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#0a0a0a;border-top:1px solid #1a1a1a;display:flex;z-index:30}
+.nav-btn{flex:1;background:none;border:none;padding:12px 0 20px;font-size:11px;color:#444;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .2s}
+.nav-btn.active{color:#f59e0b}
+.nav-icon{font-size:20px}
+
+/* Pages */
+.page{flex:1;overflow-y:auto;padding:12px 20px 100px;display:none}
+.page.active{display:block}
+
+/* Today page */
 #empty{text-align:center;margin-top:70px;color:#444}
 #empty .icon{font-size:44px;margin-bottom:10px}
 #empty p{font-size:14px}
 #empty small{font-size:12px;color:#333;margin-top:4px;display:block}
-
 .entry{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;animation:fadeUp .2s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .entry-body{flex:1;min-width:0}
@@ -60,8 +62,9 @@ button{font-family:inherit;cursor:pointer}
 .del-btn{background:none;border:none;color:#282828;font-size:20px;padding:2px 6px;flex-shrink:0;transition:color .15s}
 .del-btn:hover,.del-btn:active{color:#f87171}
 
-/* Input bar */
-#input-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#0a0a0a;border-top:1px solid #1a1a1a;padding:10px 20px 28px;z-index:20}
+/* Input bar (today only) */
+#input-bar{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#0a0a0a;border-top:1px solid #1a1a1a;padding:10px 20px 10px;z-index:20;display:none}
+#input-bar.visible{display:block}
 #error-msg{font-size:12px;color:#f87171;margin-bottom:7px;display:none}
 #input-row{display:flex;gap:8px;align-items:flex-end}
 #food-input{flex:1;background:#111;border:1px solid #222;border-radius:12px;padding:11px 14px;color:#f0f0f0;font-size:14px;resize:none;line-height:1.4}
@@ -69,6 +72,14 @@ button{font-family:inherit;cursor:pointer}
 #send-btn.ready{background:#f59e0b;color:#0a0a0a}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{display:inline-block;animation:spin .8s linear infinite}
+
+/* History page */
+.day-block{margin-bottom:20px}
+.day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+.day-title{font-size:13px;font-weight:600;color:#888}
+.day-kcal{font-size:13px;font-weight:600;color:#f59e0b;font-family:'DM Mono',monospace}
+#hist-empty{text-align:center;margin-top:70px;color:#444;font-size:14px}
+#hist-loading{text-align:center;margin-top:70px;color:#555;font-size:14px}
 
 /* Modals */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px}
@@ -127,7 +138,8 @@ button{font-family:inherit;cursor:pointer}
     </div>
   </div>
 
-  <div id="list">
+  <!-- Today -->
+  <div id="page-today" class="page active">
     <div id="empty">
       <div class="icon">🥗</div>
       <p>Добавь что съел сегодня</p>
@@ -135,12 +147,30 @@ button{font-family:inherit;cursor:pointer}
     </div>
   </div>
 
-  <div id="input-bar">
+  <!-- History -->
+  <div id="page-history" class="page">
+    <div id="hist-loading">Загрузка...</div>
+    <div id="hist-content" style="display:none"></div>
+    <div id="hist-empty" style="display:none">История пуста</div>
+  </div>
+
+  <!-- Input bar -->
+  <div id="input-bar" class="visible">
     <div id="error-msg"></div>
     <div id="input-row">
       <textarea id="food-input" rows="2" placeholder="Что съел? Например: тарелка борща со сметаной..."></textarea>
       <button id="send-btn">↑</button>
     </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div id="bottom-nav">
+    <button class="nav-btn active" id="nav-today" onclick="switchTab('today')">
+      <span class="nav-icon">🍽</span>Сегодня
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
+      <span class="nav-icon">📅</span>История
+    </button>
   </div>
 </div>
 
@@ -158,51 +188,64 @@ button{font-family:inherit;cursor:pointer}
 
 <script>
 const TODAY = new Date().toISOString().split("T")[0];
-const ENTRIES_KEY = "calories:" + TODAY;
+const SB_URL  = "https://qsyssugfcsmpomxyaahw.supabase.co/rest/v1";
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEsOYF6GGF7BDlgIn-rzvTBR1kY";
+const SB_HDR  = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" };
 
-// --- Storage helpers ---
-function load(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
-function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
-
-// --- State ---
-let entries = load(ENTRIES_KEY) || [];
-let goal = load("goal") || 2000;
+let entries = [];
+let goal = Number(localStorage.getItem("goal")) || 2000;
 let apiKey = localStorage.getItem("anthropic_key") || "";
 
-// --- API ---
+// --- Supabase helpers ---
+async function dbLoad(date) {
+  const res = await fetch(`${SB_URL}/entries?date=eq.${date}&order=id.asc`, { headers: SB_HDR });
+  if (!res.ok) throw new Error("DB load failed");
+  return res.json();
+}
+
+async function dbInsert(entry) {
+  const res = await fetch(`${SB_URL}/entries`, {
+    method: "POST",
+    headers: { ...SB_HDR, "Prefer": "return=minimal" },
+    body: JSON.stringify(entry)
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error("DB insert: " + t); }
+}
+
+async function dbDelete(id) {
+  const res = await fetch(`${SB_URL}/entries?id=eq.${id}`, { method: "DELETE", headers: SB_HDR });
+  if (!res.ok) throw new Error("DB delete failed");
+}
+
+async function dbHistory() {
+  const res = await fetch(`${SB_URL}/entries?date=neq.${TODAY}&order=date.desc,id.asc&limit=200`, { headers: SB_HDR });
+  if (!res.ok) throw new Error("DB history failed");
+  return res.json();
+}
+
+// --- Anthropic API ---
 async function estimateNutrition(text) {
-  console.log("=== API CALL START ===");
-  let res;
-  try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the food described.',
-        messages: [{ role: "user", content: text }]
-      })
-    });
-  } catch(e) {
-    console.error("FETCH FAILED:", e);
-    throw new Error("Сеть недоступна: " + e.message);
-  }
-  console.log("HTTP status:", res.status);
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the food described.',
+      messages: [{ role: "user", content: text }]
+    })
+  });
   const rawText = await res.text();
-  console.log("RAW RESPONSE:", rawText);
-  if (!res.ok) throw new Error("HTTP " + res.status + ": " + rawText.slice(0, 200));
-  let data;
-  try { data = JSON.parse(rawText); } catch(e) { throw new Error("Ответ не JSON: " + rawText.slice(0, 200)); }
+  if (!res.ok) throw new Error("API " + res.status + ": " + rawText.slice(0, 100));
+  const data = JSON.parse(rawText);
   const raw = data.content?.find(b => b.type === "text")?.text || "{}";
-  console.log("MODEL TEXT:", raw);
   try {
-    const match = raw.match(/\{[\s\S]*\}/);
+    const match = raw.match(/\{[\s\S]*?\}/);
     const n = JSON.parse(match ? match[0] : "{}");
     return {
       kcal:    Math.max(0, Number(n.kcal)    || 0),
@@ -210,35 +253,34 @@ async function estimateNutrition(text) {
       fat:     Math.max(0, Number(n.fat)     || 0),
       carbs:   Math.max(0, Number(n.carbs)   || 0),
       fiber:   Math.max(0, Number(n.fiber)   || 0),
-      name:    String(n.name || foodText).slice(0, 35),
+      name:    String(n.name || text).slice(0, 35),
     };
-  } catch {
-    throw new Error("Не удалось разобрать ответ AI. Попробуй ещё раз.");
-  }
+  } catch { throw new Error("Не удалось разобрать ответ AI"); }
 }
 
-// --- DOM helpers ---
+// --- DOM ---
 function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function showError(msg) { const e=el("error-msg"); e.textContent=msg; e.style.display=msg?"block":"none"; }
 
-function renderEntries() {
-  const list = el("list");
-  el("empty").style.display = entries.length ? "none" : "block";
-  // Remove old entry cards
+function renderToday() {
+  const list = el("page-today");
   list.querySelectorAll(".entry").forEach(e => e.remove());
+  el("empty").style.display = entries.length ? "none" : "block";
 
-  const totals = entries.reduce((a, e) => ({
-    kcal: a.kcal + e.kcal, protein: a.protein + e.protein,
-    fat: a.fat + e.fat, carbs: a.carbs + e.carbs, fiber: a.fiber + e.fiber
-  }), { kcal:0, protein:0, fat:0, carbs:0, fiber:0 });
+  const totals = entries.reduce((a,e) => ({
+    kcal:a.kcal+e.kcal, protein:a.protein+e.protein,
+    fat:a.fat+e.fat, carbs:a.carbs+e.carbs, fiber:a.fiber+e.fiber
+  }), {kcal:0,protein:0,fat:0,carbs:0,fiber:0});
 
   entries.forEach(entry => {
     const div = document.createElement("div");
     div.className = "entry";
-    const nameNeqText = entry.text.toLowerCase() !== (entry.name||"").toLowerCase();
+    const diff = entry.text.toLowerCase() !== (entry.name||"").toLowerCase();
     div.innerHTML = `
       <div class="entry-body">
-        <div class="entry-name">${esc(entry.name || entry.text)}</div>
-        ${nameNeqText ? `<div class="entry-raw">${esc(entry.text)}</div>` : ""}
+        <div class="entry-name">${esc(entry.name||entry.text)}</div>
+        ${diff?`<div class="entry-raw">${esc(entry.text)}</div>`:""}
         <div class="entry-macros">
           <span style="color:#60a5fa">Б ${entry.protein}г</span>
           <span style="color:#f59e0b">Ж ${entry.fat}г</span>
@@ -250,67 +292,126 @@ function renderEntries() {
         <div class="entry-kcal">${entry.kcal}</div>
         <div class="entry-time">${entry.time}</div>
       </div>
-      <button class="del-btn" data-id="${entry.id}">×</button>
-    `;
-    div.querySelector(".del-btn").addEventListener("click", () => {
-      entries = entries.filter(e => e.id !== entry.id);
-      save(ENTRIES_KEY, entries);
-      renderEntries();
+      <button class="del-btn" data-id="${entry.id}">×</button>`;
+    div.querySelector(".del-btn").addEventListener("click", async () => {
+      try {
+        await dbDelete(entry.id);
+        entries = entries.filter(e => e.id !== entry.id);
+        renderToday();
+      } catch(e) { showError("Ошибка удаления"); }
     });
     list.appendChild(div);
   });
 
-  // Update header stats
-  const progress = Math.min((totals.kcal / goal) * 100, 100);
+  updateHeader(totals);
+}
+
+function updateHeader(totals) {
+  const progress = Math.min((totals.kcal/goal)*100, 100);
   const remaining = goal - totals.kcal;
   const over = remaining < 0;
-  const barColor = progress > 95 ? "#f87171" : progress > 75 ? "#fb923c" : "#f59e0b";
-
   el("kcal-num").textContent = totals.kcal;
   el("remaining").textContent = over ? `+${Math.abs(remaining)} перебор` : `−${remaining} осталось`;
   el("remaining").style.color = over ? "#f87171" : "#4ade80";
   el("prog-fill").style.width = progress + "%";
-  el("prog-fill").style.background = barColor;
+  el("prog-fill").style.background = progress>95?"#f87171":progress>75?"#fb923c":"#f59e0b";
   el("m-p").textContent = totals.protein + "г";
   el("m-f").textContent = totals.fat + "г";
   el("m-c").textContent = totals.carbs + "г";
   el("m-fi").textContent = totals.fiber + "г";
 }
 
-function esc(str) {
-  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+async function renderHistory() {
+  el("hist-loading").style.display = "block";
+  el("hist-content").style.display = "none";
+  el("hist-empty").style.display = "none";
+  try {
+    const rows = await dbHistory();
+    el("hist-loading").style.display = "none";
+    if (!rows.length) { el("hist-empty").style.display = "block"; return; }
+
+    // Group by date
+    const byDate = {};
+    rows.forEach(r => { if(!byDate[r.date]) byDate[r.date]=[]; byDate[r.date].push(r); });
+
+    const cont = el("hist-content");
+    cont.innerHTML = "";
+    Object.keys(byDate).sort().reverse().forEach(date => {
+      const dayEntries = byDate[date];
+      const totalKcal = dayEntries.reduce((s,e)=>s+e.kcal,0);
+      const d = new Date(date + "T12:00:00");
+      const label = d.toLocaleDateString("ru-RU", { weekday:"short", day:"numeric", month:"short" });
+
+      const block = document.createElement("div");
+      block.className = "day-block";
+      block.innerHTML = `
+        <div class="day-header">
+          <span class="day-title">${esc(label)}</span>
+          <span class="day-kcal">${totalKcal} ккал</span>
+        </div>`;
+      dayEntries.forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "entry";
+        div.innerHTML = `
+          <div class="entry-body">
+            <div class="entry-name">${esc(entry.name||entry.text)}</div>
+            <div class="entry-macros">
+              <span style="color:#60a5fa">Б ${entry.protein}г</span>
+              <span style="color:#f59e0b">Ж ${entry.fat}г</span>
+              <span style="color:#4ade80">У ${entry.carbs}г</span>
+              <span style="color:#c084fc">К ${entry.fiber}г</span>
+            </div>
+          </div>
+          <div class="entry-right">
+            <div class="entry-kcal">${entry.kcal}</div>
+            <div class="entry-time">${entry.time}</div>
+          </div>`;
+        block.appendChild(div);
+      });
+      cont.appendChild(block);
+    });
+    cont.style.display = "block";
+  } catch(e) {
+    el("hist-loading").textContent = "Ошибка загрузки истории";
+  }
 }
 
-function showError(msg) {
-  const e = el("error-msg");
-  e.textContent = msg;
-  e.style.display = msg ? "block" : "none";
+function switchTab(tab) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  el("page-" + tab).classList.add("active");
+  el("nav-" + tab).classList.add("active");
+  if (tab === "today") {
+    el("input-bar").classList.add("visible");
+    updateHeader(entries.reduce((a,e)=>({kcal:a.kcal+e.kcal,protein:a.protein+e.protein,fat:a.fat+e.fat,carbs:a.carbs+e.carbs,fiber:a.fiber+e.fiber}),{kcal:0,protein:0,fat:0,carbs:0,fiber:0}));
+  } else {
+    el("input-bar").classList.remove("visible");
+    renderHistory();
+  }
 }
 
 // --- Init ---
-function initApp() {
+async function initApp() {
   el("key-screen").style.display = "none";
   el("app").style.display = "flex";
 
-  // Date
   const dateStr = new Date().toLocaleDateString("ru-RU", { weekday:"long", day:"numeric", month:"long" });
   el("date-label").textContent = dateStr;
   el("goal-display").textContent = goal;
 
-  renderEntries();
+  try {
+    entries = await dbLoad(TODAY);
+  } catch(e) {
+    entries = [];
+    showError("Нет соединения с БД");
+  }
+  renderToday();
 
-  // Send button state
   const foodInput = el("food-input");
   const sendBtn = el("send-btn");
 
-  foodInput.addEventListener("input", () => {
-    sendBtn.className = foodInput.value.trim() ? "ready" : "";
-  });
-
-  foodInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAdd(); }
-  });
-
+  foodInput.addEventListener("input", () => { sendBtn.className = foodInput.value.trim()?"ready":""; });
+  foodInput.addEventListener("keydown", e => { if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleAdd();} });
   sendBtn.addEventListener("click", handleAdd);
 
   async function handleAdd() {
@@ -320,63 +421,51 @@ function initApp() {
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<span class="spinner">◌</span>';
     sendBtn.className = "";
-
     try {
       const n = await estimateNutrition(text);
       const entry = {
         id: Date.now(),
+        date: TODAY,
         text,
         name: n.name || text,
-        time: new Date().toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" }),
-        kcal: Math.round(n.kcal || 0),
-        protein: Math.round(n.protein || 0),
-        fat: Math.round(n.fat || 0),
-        carbs: Math.round(n.carbs || 0),
-        fiber: Math.round(n.fiber || 0),
+        time: new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),
+        kcal: Math.round(n.kcal),
+        protein: Math.round(n.protein),
+        fat: Math.round(n.fat),
+        carbs: Math.round(n.carbs),
+        fiber: Math.round(n.fiber),
       };
+      await dbInsert(entry);
       entries.push(entry);
-      save(ENTRIES_KEY, entries);
       foodInput.value = "";
-      renderEntries();
-    } catch(e) {
-      showError("Ошибка: " + e.message);
-    }
-
+      renderToday();
+    } catch(e) { showError("Ошибка: " + e.message); }
     sendBtn.disabled = false;
     sendBtn.innerHTML = "↑";
-    sendBtn.className = foodInput.value.trim() ? "ready" : "";
+    sendBtn.className = foodInput.value.trim()?"ready":"";
   }
 
-  // Gear / goal
-  el("gear-btn").addEventListener("click", () => {
-    el("goal-input").value = goal;
-    el("goal-modal").style.display = "flex";
-  });
-  el("goal-cancel").addEventListener("click", () => { el("goal-modal").style.display = "none"; });
+  el("gear-btn").addEventListener("click", () => { el("goal-input").value=goal; el("goal-modal").style.display="flex"; });
+  el("goal-cancel").addEventListener("click", () => { el("goal-modal").style.display="none"; });
   el("goal-confirm").addEventListener("click", () => {
     const n = parseInt(el("goal-input").value);
-    if (n > 0) { goal = n; save("goal", goal); el("goal-display").textContent = goal; renderEntries(); }
-    el("goal-modal").style.display = "none";
+    if(n>0){ goal=n; localStorage.setItem("goal",n); el("goal-display").textContent=n; renderToday(); }
+    el("goal-modal").style.display="none";
   });
 }
 
 // --- API Key screen ---
 const keyInput = el("key-input");
-const keySave = el("key-save");
-
-keyInput.addEventListener("input", () => {
-  keySave.className = keyInput.value.startsWith("sk-ant") ? "ready" : "";
-});
-
+const keySave  = el("key-save");
+keyInput.addEventListener("input", () => { keySave.className = keyInput.value.startsWith("sk-ant")?"ready":""; });
 keySave.addEventListener("click", () => {
   const k = keyInput.value.trim();
-  if (!k.startsWith("sk-ant") || k.length < 30) return;
+  if(!k.startsWith("sk-ant")||k.length<30) return;
   apiKey = k;
   localStorage.setItem("anthropic_key", k);
   initApp();
 });
 
-// Auto-init if key exists
 if (apiKey) initApp();
 </script>
 </body>
