@@ -180,7 +180,7 @@ async function estimateNutrition(text) {
       "anthropic-dangerous-direct-browser-access": "true"
     },
     body: JSON.stringify({
-      model: "claude-3-5-haiku-20241022",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       system: 'Nutrition expert. Return ONLY valid JSON, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"food name in Russian max 35 chars"}',
       messages: [{ role: "user", content: text }]
