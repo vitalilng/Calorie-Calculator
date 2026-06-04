@@ -183,6 +183,7 @@ button{font-family:inherit;cursor:pointer}
       <button class="btn-cancel" id="goal-cancel">Отмена</button>
       <button class="btn-save" id="goal-confirm">Сохранить</button>
     </div>
+    <button id="change-key-btn" style="width:100%;margin-top:10px;background:none;border:1px solid #2a2a2a;border-radius:10px;padding:10px;color:#555;font-size:13px">🔑 Сменить API ключ</button>
   </div>
 </div>
 
@@ -451,6 +452,14 @@ async function initApp() {
     const n = parseInt(el("goal-input").value);
     if(n>0){ goal=n; localStorage.setItem("goal",n); el("goal-display").textContent=n; renderToday(); }
     el("goal-modal").style.display="none";
+  });
+  el("change-key-btn").addEventListener("click", () => {
+    el("goal-modal").style.display="none";
+    localStorage.removeItem("anthropic_key");
+    apiKey = "";
+    el("key-input").value = "";
+    el("key-screen").style.display = "flex";
+    el("app").style.display = "none";
   });
 }
 
