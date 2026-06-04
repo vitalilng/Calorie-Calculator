@@ -181,7 +181,7 @@ async function estimateNutrition(text) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
+      max_tokens: 400,
       system: 'Nutrition expert. Return ONLY valid JSON, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"food name in Russian max 35 chars"}',
       messages: [{ role: "user", content: text }]
     })
@@ -192,7 +192,19 @@ async function estimateNutrition(text) {
   }
   const data = await res.json();
   const raw = data.content?.find(b => b.type === "text")?.text || "{}";
-  return JSON.parse(raw.replace(/```json|```/g, "").trim());
+  try {
+    const n = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    return {
+      kcal:    Math.max(0, Number(n.kcal)    || 0),
+      protein: Math.max(0, Number(n.protein) || 0),
+      fat:     Math.max(0, Number(n.fat)     || 0),
+      carbs:   Math.max(0, Number(n.carbs)   || 0),
+      fiber:   Math.max(0, Number(n.fiber)   || 0),
+      name:    String(n.name || foodText).slice(0, 35),
+    };
+  } catch {
+    throw new Error("Не удалось разобрать ответ AI. Попробуй ещё раз.");
+  }
 }
 
 // --- DOM helpers ---
@@ -348,7 +360,7 @@ keyInput.addEventListener("input", () => {
 
 keySave.addEventListener("click", () => {
   const k = keyInput.value.trim();
-  if (!k.startsWith("sk-ant")) return;
+  if (!k.startsWith("sk-ant") || k.length < 30) return;
   apiKey = k;
   localStorage.setItem("anthropic_key", k);
   initApp();
