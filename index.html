@@ -192,6 +192,8 @@ async function estimateNutrition(text) {
   }
   const data = await res.json();
   const raw = data.content?.find(b => b.type === "text")?.text || "{}";
+  console.log("RAW API RESPONSE:", raw);
+  console.log("FULL DATA:", JSON.stringify(data));
   try {
     const match = raw.match(/\{[\s\S]*\}/);
     const n = JSON.parse(match ? match[0] : "{}");
