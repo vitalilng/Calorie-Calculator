@@ -109,8 +109,17 @@ button{font-family:inherit;cursor:pointer}
 </head>
 <body>
 
-<!-- API Key screen -->
-<div id="key-screen">
+<!-- Auth screen -->
+<div id="auth-screen" style="position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;z-index:200">
+  <div style="font-size:48px;margin-bottom:14px">🥗</div>
+  <h2 style="font-size:20px;font-weight:600;margin-bottom:6px">Калории</h2>
+  <p id="auth-subtitle" style="font-size:13px;color:#555;margin-bottom:28px">Войди чтобы синхронизировать данные</p>
+  <input id="auth-email" type="email" placeholder="Email" style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:14px;margin-bottom:10px"/>
+  <input id="auth-password" type="password" placeholder="Пароль" style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:14px;margin-bottom:16px"/>
+  <p id="auth-error" style="font-size:12px;color:#f87171;margin-bottom:10px;display:none"></p>
+  <button id="auth-submit" style="width:100%;max-width:340px;background:#f59e0b;color:#0a0a0a;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;margin-bottom:12px">Войти</button>
+  <button id="auth-toggle" style="background:none;border:none;color:#555;font-size:13px">Нет аккаунта? Зарегистрироваться</button>
+</div>
   <div class="icon">🔑</div>
   <h2>API ключ Anthropic</h2>
   <p>Нужен для оценки калорий через AI.<br>Получи на <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
@@ -238,10 +247,46 @@ const DEFAULT_PROMPT = `Ты диетолог. Проанализируй пит
 // --- Auth ---
 async function initAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    const { error } = await sb.auth.signInAnonymously();
-    if (error) throw new Error("Auth: " + error.message);
-  }
+  if (!session) throw new Error("no_session");
+}
+
+function showAuthScreen() {
+  el("auth-screen").style.display = "flex";
+  let isSignup = false;
+
+  el("auth-toggle").addEventListener("click", () => {
+    isSignup = !isSignup;
+    el("auth-submit").textContent = isSignup ? "Зарегистрироваться" : "Войти";
+    el("auth-toggle").textContent = isSignup ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться";
+    el("auth-subtitle").textContent = isSignup ? "Создай аккаунт" : "Войди чтобы синхронизировать данные";
+    el("auth-error").style.display = "none";
+  });
+
+  el("auth-submit").addEventListener("click", async () => {
+    const email = el("auth-email").value.trim();
+    const password = el("auth-password").value.trim();
+    if (!email || !password) { showAuthError("Заполни email и пароль"); return; }
+    el("auth-submit").textContent = "...";
+    el("auth-submit").disabled = true;
+    const { error } = isSignup
+      ? await sb.auth.signUp({ email, password })
+      : await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      showAuthError(error.message);
+      el("auth-submit").textContent = isSignup ? "Зарегистрироваться" : "Войти";
+      el("auth-submit").disabled = false;
+    } else {
+      el("auth-screen").style.display = "none";
+      checkApiKey();
+    }
+  });
+
+  el("auth-password").addEventListener("keydown", e => { if(e.key==="Enter") el("auth-submit").click(); });
+}
+
+function showAuthError(msg) {
+  el("auth-error").textContent = msg;
+  el("auth-error").style.display = "block";
 }
 
 // --- DB ---
@@ -280,7 +325,7 @@ async function estimateNutrition(text) {
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the given food in Russian language.',
+      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the food described.',
       messages: [{ role: "user", content: text }]
     })
   });
@@ -444,7 +489,6 @@ async function initApp() {
   el("goal-display").textContent = goal;
 
   try {
-    await initAuth();
     entries = await dbLoad(TODAY);
   } catch(e) {
     entries = [];
@@ -517,7 +561,7 @@ async function initApp() {
     el("analysis-modal").style.display = "flex";
     const prompt = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
     const totals = entries.reduce((a,e)=>({kcal:a.kcal+e.kcal,protein:a.protein+e.protein,fat:a.fat+e.fat,carbs:a.carbs+e.carbs,fiber:a.fiber+e.fiber}),{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
-    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г\n\nЗаписи за день:\n${entries.map(e=>`• ${e.name}: ${e.kcal} ккал`).join("\n")}`;
+    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г\n\nПриёмы пищи:\n` + entries.map(e=>`- ${e.name}: ${e.kcal} ккал`).join("\n");
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -543,7 +587,6 @@ async function initApp() {
   });
 }
 
-// --- API Key screen ---
 const keyInput = el("key-input");
 const keySave  = el("key-save");
 keyInput.addEventListener("input", () => { keySave.className = keyInput.value.startsWith("sk-ant")?"ready":""; });
@@ -552,10 +595,24 @@ keySave.addEventListener("click", () => {
   if(!k.startsWith("sk-ant")||k.length<30) return;
   apiKey = k;
   localStorage.setItem("anthropic_key", k);
+  el("key-screen").style.display = "none";
   initApp();
 });
 
-if (apiKey) initApp();
+// --- Startup ---
+function checkApiKey() {
+  if (apiKey) { initApp(); }
+  else { el("key-screen").style.display = "flex"; }
+}
+
+(async () => {
+  try {
+    await initAuth();
+    checkApiKey();
+  } catch {
+    showAuthScreen();
+  }
+})();
 </script>
 </body>
 </html>
