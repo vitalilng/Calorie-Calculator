@@ -234,9 +234,47 @@ const DEFAULT_PROMPT = `Ты диетолог. Проанализируй пит
 Укажи: баланс макросов, что хорошо, что стоит улучшить, конкретные советы.
 Будь лаконичен — не более 150 слов.`;
 
+// --- Supabase Auth ---
+const AUTH_URL = "https://qsyssugfcsmpomxyaahw.supabase.co/auth/v1";
+let sbSession = JSON.parse(localStorage.getItem("sb_session") || "null");
+
+function sbHeaders() {
+  const token = sbSession?.access_token || SB_KEY;
+  return { "apikey": SB_KEY, "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+}
+
+async function initAuth() {
+  // Try refresh if session exists
+  if (sbSession?.refresh_token) {
+    try {
+      const res = await fetch(`${AUTH_URL}/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: { "apikey": SB_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: sbSession.refresh_token })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        sbSession = { access_token: data.access_token, refresh_token: data.refresh_token, user_id: data.user.id };
+        localStorage.setItem("sb_session", JSON.stringify(sbSession));
+        return;
+      }
+    } catch {}
+  }
+  // Anonymous sign in
+  const res = await fetch(`${AUTH_URL}/signup`, {
+    method: "POST",
+    headers: { "apikey": SB_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) throw new Error("Auth failed");
+  const data = await res.json();
+  sbSession = { access_token: data.access_token, refresh_token: data.refresh_token, user_id: data.user.id };
+  localStorage.setItem("sb_session", JSON.stringify(sbSession));
+}
+
 // --- Supabase helpers ---
 async function dbLoad(date) {
-  const res = await fetch(`${SB_URL}/entries?date=eq.${date}&order=id.asc`, { headers: SB_HDR });
+  const res = await fetch(`${SB_URL}/entries?date=eq.${date}&order=id.asc`, { headers: sbHeaders() });
   if (!res.ok) throw new Error("DB load failed");
   return res.json();
 }
@@ -244,19 +282,19 @@ async function dbLoad(date) {
 async function dbInsert(entry) {
   const res = await fetch(`${SB_URL}/entries`, {
     method: "POST",
-    headers: { ...SB_HDR, "Prefer": "return=minimal" },
-    body: JSON.stringify(entry)
+    headers: { ...sbHeaders(), "Prefer": "return=minimal" },
+    body: JSON.stringify({ ...entry, user_id: sbSession.user_id })
   });
   if (!res.ok) { const t = await res.text(); throw new Error("DB insert: " + t); }
 }
 
 async function dbDelete(id) {
-  const res = await fetch(`${SB_URL}/entries?id=eq.${id}`, { method: "DELETE", headers: SB_HDR });
+  const res = await fetch(`${SB_URL}/entries?id=eq.${id}`, { method: "DELETE", headers: sbHeaders() });
   if (!res.ok) throw new Error("DB delete failed");
 }
 
 async function dbHistory() {
-  const res = await fetch(`${SB_URL}/entries?date=neq.${TODAY}&order=date.desc,id.asc&limit=200`, { headers: SB_HDR });
+  const res = await fetch(`${SB_URL}/entries?date=neq.${TODAY}&order=date.desc,id.asc&limit=200`, { headers: sbHeaders() });
   if (!res.ok) throw new Error("DB history failed");
   return res.json();
 }
@@ -438,6 +476,7 @@ async function initApp() {
   el("goal-display").textContent = goal;
 
   try {
+    await initAuth();
     entries = await dbLoad(TODAY);
   } catch(e) {
     entries = [];
