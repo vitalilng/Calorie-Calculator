@@ -250,7 +250,9 @@ const DEFAULT_PROMPT = `Ты диетолог. Проанализируй пит
 // --- Auth ---
 async function initAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) throw new Error("no_session");
+  if (session) return;
+  const { data, error } = await sb.auth.refreshSession();
+  if (!data.session) throw new Error("no_session");
 }
 
 function showAuthScreen() {
