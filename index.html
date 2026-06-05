@@ -237,7 +237,9 @@ button{font-family:inherit;cursor:pointer}
 const TODAY = new Date().toISOString().split("T")[0];
 const SB_URL  = "https://qsyssugfcsmpomxyaahw.supabase.co";
 const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEsOYF6GGF7BDlgIn-rzvTBR1kY";
-const sb = window.supabase.createClient(SB_URL, SB_KEY);
+const sb = window.supabase.createClient(SB_URL, SB_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
 
 let entries = [];
 let goal = Number(localStorage.getItem("goal")) || 2000;
@@ -248,11 +250,16 @@ const DEFAULT_PROMPT = `Ты диетолог. Проанализируй пит
 Будь лаконичен — не более 150 слов.`;
 
 // --- Auth ---
-async function initAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) return;
-  const { data, error } = await sb.auth.refreshSession();
-  if (!data.session) throw new Error("no_session");
+function initAuth() {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), 5000);
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      clearTimeout(t);
+      subscription.unsubscribe();
+      if (session) resolve();
+      else reject(new Error("no_session"));
+    });
+  });
 }
 
 function showAuthScreen() {
