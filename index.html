@@ -99,8 +99,8 @@ button{font-family:inherit;cursor:pointer}
 #key-screen p{font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:22px}
 #key-screen a{color:#f59e0b}
 #key-input{width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:13px;font-family:'DM Mono',monospace;margin-bottom:10px}
-#key-save{width:100%;max-width:340px;background:#1a1a1a;color:#444;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;transition:background .2s,color .2s}
-#key-save.ready{background:#f59e0b;color:#0a0a0a}
+#key-save{width:100%;max-width:340px;background:#1a1a1a;color:#444;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;transition:background .2s,color .2s;cursor:default}
+#key-save.ready{background:#f59e0b;color:#0a0a0a;cursor:pointer}
 /* Analysis result modal */
 #analysis-modal .modal{max-width:380px}
 #analysis-result{font-size:14px;color:#ccc;line-height:1.7;white-space:pre-wrap;max-height:60vh;overflow-y:auto;margin:12px 0}
@@ -115,16 +115,10 @@ button{font-family:inherit;cursor:pointer}
   <h2 style="font-size:20px;font-weight:600;margin-bottom:6px">Калории</h2>
   <p id="auth-subtitle" style="font-size:13px;color:#555;margin-bottom:28px">Войди чтобы синхронизировать данные</p>
   <input id="auth-email" type="email" placeholder="Email" style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:14px;margin-bottom:10px"/>
-  <input id="auth-password" type="password" placeholder="Пароль" style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:14px;margin-bottom:16px"/>
+  <input id="auth-password" type="password" placeholder="Пароль" style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:14px;margin-bottom:10px"/>
   <p id="auth-error" style="font-size:12px;color:#f87171;margin-bottom:10px;display:none"></p>
   <button id="auth-submit" style="width:100%;max-width:340px;background:#f59e0b;color:#0a0a0a;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;margin-bottom:12px">Войти</button>
   <button id="auth-toggle" style="background:none;border:none;color:#555;font-size:13px">Нет аккаунта? Зарегистрироваться</button>
-</div>
-  <div class="icon">🔑</div>
-  <h2>API ключ Anthropic</h2>
-  <p>Нужен для оценки калорий через AI.<br>Получи на <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
-  <input id="key-input" type="text" placeholder="sk-ant-..."/>
-  <button id="key-save">Сохранить</button>
 </div>
 
 <!-- Main app -->
@@ -229,11 +223,12 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
+<!-- Key input screen -->
 <div id="key-screen" style="position:fixed;inset:0;background:#0a0a0a;display:none;flex-direction:column;align-items:center;justify-content:center;padding:28px;z-index:150">
   <div style="font-size:48px;margin-bottom:14px">🔑</div>
   <h2 style="font-size:18px;font-weight:600;margin-bottom:8px">API ключ Anthropic</h2>
-  <p style="font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:22px">Нужен для оценки калорий через AI.<br>Получи на <a href="https://console.anthropic.com" target="_blank" style="color:#f59e0b">console.anthropic.com</a></p>
-  <input id="key-input" type="text" placeholder="sk-ant-..." style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:13px;font-family:monospace;margin-bottom:10px"/>
+  <p style="font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:22px">Нужен для оценки калорий через AI.<br>Получи на <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+  <input id="key-input" type="text" placeholder="sk-ant-..." style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:13px;font-family:'DM Mono',monospace;margin-bottom:10px"/>
   <button id="key-save" style="width:100%;max-width:340px;background:#1a1a1a;color:#444;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600">Сохранить</button>
 </div>
 
@@ -241,7 +236,7 @@ button{font-family:inherit;cursor:pointer}
 <script>
 const TODAY = new Date().toISOString().split("T")[0];
 const SB_URL  = "https://qsyssugfcsmpomxyaahw.supabase.co";
-const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEsOYF6GGF7BDlgIn-rzvTBR1kY";
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEgT5mUh5OcvmVe7tHmK3fT3V1s";
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 let entries = [];
@@ -334,7 +329,7 @@ async function estimateNutrition(text) {
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the food described.',
+      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for: ',
       messages: [{ role: "user", content: text }]
     })
   });
@@ -489,6 +484,8 @@ function switchTab(tab) {
 }
 
 // --- Init ---
+let appReady = false;
+
 async function initApp() {
   if (appReady) return;
   appReady = true;
@@ -563,6 +560,7 @@ async function initApp() {
     el("key-input").value = "";
     el("key-screen").style.display = "flex";
     el("app").style.display = "none";
+    appReady = false;
   });
 
   // --- Analysis ---
@@ -572,7 +570,7 @@ async function initApp() {
     el("analysis-modal").style.display = "flex";
     const prompt = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
     const totals = entries.reduce((a,e)=>({kcal:a.kcal+e.kcal,protein:a.protein+e.protein,fat:a.fat+e.fat,carbs:a.carbs+e.carbs,fiber:a.fiber+e.fiber}),{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
-    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г\n\nПриёмы пищи:\n` + entries.map(e=>`- ${e.name}: ${e.kcal} ккал`).join("\n");
+    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г`;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -602,15 +600,14 @@ const keyInput = el("key-input");
 const keySave  = el("key-save");
 
 keyInput.addEventListener("input", () => {
-  const ok = keyInput.value.trim().startsWith("sk-ant");
-  keySave.style.background = ok ? "#f59e0b" : "#1a1a1a";
-  keySave.style.color       = ok ? "#0a0a0a" : "#444";
-  keySave.style.cursor      = ok ? "pointer"  : "default";
+  const k = keyInput.value.trim();
+  const isValid = k.startsWith("sk-ant") && k.length >= 50;
+  keySave.classList.toggle("ready", isValid);
 });
 
 keySave.addEventListener("click", () => {
   const k = keyInput.value.trim();
-  if (!k.startsWith("sk-ant")) return;
+  if (!k.startsWith("sk-ant") || k.length < 50) return;
   apiKey = k;
   localStorage.setItem("anthropic_key", k);
   el("key-screen").style.display = "none";
@@ -618,8 +615,6 @@ keySave.addEventListener("click", () => {
 });
 
 // --- Startup ---
-let appReady = false;
-
 function checkApiKey() {
   if (apiKey) { initApp(); }
   else { el("key-screen").style.display = "flex"; }
