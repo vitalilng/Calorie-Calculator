@@ -22,6 +22,8 @@ button{font-family:inherit;cursor:pointer}
 #date-label{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
 #title{font-size:22px;font-weight:600;letter-spacing:-.02em}
 #gear-btn{background:none;border:none;color:#444;font-size:20px;padding:4px 8px;margin-top:4px}
+#analyze-btn{background:none;border:1px solid #2a2a2a;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:600;padding:6px 12px;margin-top:4px;transition:background .2s}
+#analyze-btn:active{background:#1a1a1a}
 #kcal-row{display:flex;justify-content:space-between;align-items:flex-end;margin:14px 0 8px}
 #kcal-num{font-size:34px;font-weight:600;font-family:'DM Mono',monospace;color:#f59e0b}
 #kcal-unit{font-size:14px;color:#555}
@@ -42,7 +44,7 @@ button{font-family:inherit;cursor:pointer}
 .nav-icon{font-size:20px}
 
 /* Pages */
-.page{flex:1;overflow-y:auto;padding:12px 20px 160px;display:none}
+.page{flex:1;overflow-y:auto;padding:12px 20px 100px;display:none}
 .page.active{display:block}
 
 /* Today page */
@@ -99,6 +101,10 @@ button{font-family:inherit;cursor:pointer}
 #key-input{width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:13px;font-family:'DM Mono',monospace;margin-bottom:10px}
 #key-save{width:100%;max-width:340px;background:#1a1a1a;color:#444;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;transition:background .2s,color .2s}
 #key-save.ready{background:#f59e0b;color:#0a0a0a}
+/* Analysis result modal */
+#analysis-modal .modal{max-width:380px}
+#analysis-result{font-size:14px;color:#ccc;line-height:1.7;white-space:pre-wrap;max-height:60vh;overflow-y:auto;margin:12px 0}
+#prompt-modal textarea{width:100%;background:#0a0a0a;border:1px solid #333;border-radius:10px;padding:11px 14px;color:#f0f0f0;font-size:13px;resize:none;line-height:1.5;height:160px}
 </style>
 </head>
 <body>
@@ -120,7 +126,10 @@ button{font-family:inherit;cursor:pointer}
         <div id="date-label"></div>
         <div id="title">Калории</div>
       </div>
-      <button id="gear-btn">⚙</button>
+      <div style="display:flex;gap:4px;align-items:flex-start">
+        <button id="analyze-btn">✦ Анализ</button>
+        <button id="gear-btn">⚙</button>
+      </div>
     </div>
     <div id="kcal-row">
       <div><span id="kcal-num">0</span><span id="kcal-unit"> ккал</span></div>
@@ -174,6 +183,30 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
+<!-- Analysis modal -->
+<div id="analysis-modal" class="overlay" style="display:none">
+  <div class="modal" style="max-width:380px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h2>Анализ дня</h2>
+      <button id="edit-prompt-btn" style="background:none;border:none;color:#555;font-size:12px">✎ Промпт</button>
+    </div>
+    <div id="analysis-result" style="font-size:14px;color:#ccc;line-height:1.7;white-space:pre-wrap;max-height:55vh;overflow-y:auto;margin:12px 0">Загрузка...</div>
+    <button class="btn-save" id="analysis-close" style="width:100%">Закрыть</button>
+  </div>
+</div>
+
+<!-- Prompt edit modal -->
+<div id="prompt-modal" class="overlay" style="display:none">
+  <div class="modal">
+    <h2>Промпт для анализа</h2>
+    <textarea id="prompt-input"></textarea>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="btn-cancel" id="prompt-cancel">Отмена</button>
+      <button class="btn-save" id="prompt-save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <!-- Goal modal -->
 <div id="goal-modal" class="overlay" style="display:none">
   <div class="modal">
@@ -196,6 +229,10 @@ const SB_HDR  = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Conten
 let entries = [];
 let goal = Number(localStorage.getItem("goal")) || 2000;
 let apiKey = localStorage.getItem("anthropic_key") || "";
+
+const DEFAULT_PROMPT = `Ты диетолог. Проанализируй питание за день и дай краткие рекомендации на русском языке.
+Укажи: баланс макросов, что хорошо, что стоит улучшить, конкретные советы.
+Будь лаконичен — не более 150 слов.`;
 
 // --- Supabase helpers ---
 async function dbLoad(date) {
@@ -460,6 +497,38 @@ async function initApp() {
     el("key-input").value = "";
     el("key-screen").style.display = "flex";
     el("app").style.display = "none";
+  });
+
+  // --- Analysis ---
+  el("analyze-btn").addEventListener("click", async () => {
+    if (!entries.length) { showError("Нет данных для анализа"); return; }
+    el("analysis-result").textContent = "Анализирую...";
+    el("analysis-modal").style.display = "flex";
+    const prompt = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
+    const totals = entries.reduce((a,e)=>({kcal:a.kcal+e.kcal,protein:a.protein+e.protein,fat:a.fat+e.fat,carbs:a.carbs+e.carbs,fiber:a.fiber+e.fiber}),{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
+    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г\n\nПриёмы пищи:\n` + entries.map(e=>`- ${e.name}: ${e.kcal} ккал`).join("\n");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "x-api-key":apiKey, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+        body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:1024, system: prompt, messages:[{ role:"user", content: summary }] })
+      });
+      const data = await res.json();
+      el("analysis-result").textContent = data.content?.find(b=>b.type==="text")?.text || "Нет ответа";
+    } catch(e) { el("analysis-result").textContent = "Ошибка: " + e.message; }
+  });
+
+  el("analysis-close").addEventListener("click", () => { el("analysis-modal").style.display="none"; });
+
+  el("edit-prompt-btn").addEventListener("click", () => {
+    el("analysis-modal").style.display="none";
+    el("prompt-input").value = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
+    el("prompt-modal").style.display="flex";
+  });
+  el("prompt-cancel").addEventListener("click", () => { el("prompt-modal").style.display="none"; });
+  el("prompt-save").addEventListener("click", () => {
+    localStorage.setItem("analysis_prompt", el("prompt-input").value.trim() || DEFAULT_PROMPT);
+    el("prompt-modal").style.display="none";
   });
 }
 
