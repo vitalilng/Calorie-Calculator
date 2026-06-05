@@ -1,0 +1,19 @@
+{
+  "name": "calorie-calculator",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "preact": "^10.19.0",
+    "preact-router": "^4.1.2",
+    "@supabase/supabase-js": "^2.38.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "preact-cli": "^4.1.0"
+  }
+}
