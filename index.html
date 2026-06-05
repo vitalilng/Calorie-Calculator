@@ -252,42 +252,43 @@ async function initAuth() {
 
 function showAuthScreen() {
   el("auth-screen").style.display = "flex";
-  let isSignup = false;
-
-  el("auth-toggle").addEventListener("click", () => {
-    isSignup = !isSignup;
-    el("auth-submit").textContent = isSignup ? "Зарегистрироваться" : "Войти";
-    el("auth-toggle").textContent = isSignup ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться";
-    el("auth-subtitle").textContent = isSignup ? "Создай аккаунт" : "Войди чтобы синхронизировать данные";
-    el("auth-error").style.display = "none";
-  });
-
-  el("auth-submit").addEventListener("click", async () => {
-    const email = el("auth-email").value.trim();
-    const password = el("auth-password").value.trim();
-    if (!email || !password) { showAuthError("Заполни email и пароль"); return; }
-    el("auth-submit").textContent = "...";
-    el("auth-submit").disabled = true;
-    const { error } = isSignup
-      ? await sb.auth.signUp({ email, password })
-      : await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      showAuthError(error.message);
-      el("auth-submit").textContent = isSignup ? "Зарегистрироваться" : "Войти";
-      el("auth-submit").disabled = false;
-    } else {
-      el("auth-screen").style.display = "none";
-      checkApiKey();
-    }
-  });
-
-  el("auth-password").addEventListener("keydown", e => { if(e.key==="Enter") el("auth-submit").click(); });
 }
 
 function showAuthError(msg) {
   el("auth-error").textContent = msg;
   el("auth-error").style.display = "block";
 }
+
+// Auth listeners — run once on page load
+let isSignup = false;
+el("auth-toggle").addEventListener("click", () => {
+  isSignup = !isSignup;
+  el("auth-submit").textContent = isSignup ? "Зарегистрироваться" : "Войти";
+  el("auth-toggle").textContent = isSignup ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться";
+  el("auth-subtitle").textContent = isSignup ? "Создай аккаунт" : "Войди чтобы синхронизировать данные";
+  el("auth-error").style.display = "none";
+});
+
+el("auth-submit").addEventListener("click", async () => {
+  const email = el("auth-email").value.trim();
+  const password = el("auth-password").value.trim();
+  if (!email || !password) { showAuthError("Заполни email и пароль"); return; }
+  el("auth-submit").textContent = "...";
+  el("auth-submit").disabled = true;
+  const { error } = isSignup
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    showAuthError(error.message);
+    el("auth-submit").textContent = isSignup ? "Зарегистрироваться" : "Войти";
+    el("auth-submit").disabled = false;
+  } else {
+    el("auth-screen").style.display = "none";
+    checkApiKey();
+  }
+});
+
+el("auth-password").addEventListener("keydown", e => { if(e.key==="Enter") el("auth-submit").click(); });
 
 // --- DB ---
 async function dbLoad(date) {
