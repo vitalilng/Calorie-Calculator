@@ -490,6 +490,8 @@ function switchTab(tab) {
 
 // --- Init ---
 async function initApp() {
+  if (appReady) return;
+  appReady = true;
   el("key-screen").style.display = "none";
   el("app").style.display = "flex";
 
@@ -598,21 +600,26 @@ async function initApp() {
 
 const keyInput = el("key-input");
 const keySave  = el("key-save");
+
 keyInput.addEventListener("input", () => {
-  const ready = keyInput.value.startsWith("sk-ant") && keyInput.value.length >= 30;
-  keySave.style.background = ready ? "#f59e0b" : "#1a1a1a";
-  keySave.style.color = ready ? "#0a0a0a" : "#444";
+  const ok = keyInput.value.trim().startsWith("sk-ant");
+  keySave.style.background = ok ? "#f59e0b" : "#1a1a1a";
+  keySave.style.color       = ok ? "#0a0a0a" : "#444";
+  keySave.style.cursor      = ok ? "pointer"  : "default";
 });
+
 keySave.addEventListener("click", () => {
   const k = keyInput.value.trim();
-  if(!k.startsWith("sk-ant")||k.length<30) return;
+  if (!k.startsWith("sk-ant")) return;
   apiKey = k;
   localStorage.setItem("anthropic_key", k);
   el("key-screen").style.display = "none";
-  initApp();
+  if (!appReady) initApp();
 });
 
 // --- Startup ---
+let appReady = false;
+
 function checkApiKey() {
   if (apiKey) { initApp(); }
   else { el("key-screen").style.display = "flex"; }
