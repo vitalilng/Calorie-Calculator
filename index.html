@@ -224,7 +224,7 @@ button{font-family:inherit;cursor:pointer}
 <script>
 const TODAY = new Date().toISOString().split("T")[0];
 const SB_URL  = "https://qsyssugfcsmpomxyaahw.supabase.co";
-const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEsOYF6GGF7BDlgIn-rzvTBR1kY";
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AE5Gy4gBWMXdCZGGc_D5J-KqQlA";
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 let entries = [];
@@ -280,7 +280,7 @@ async function estimateNutrition(text) {
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the food described.',
+      system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for the given food in Russian language.',
       messages: [{ role: "user", content: text }]
     })
   });
@@ -517,7 +517,7 @@ async function initApp() {
     el("analysis-modal").style.display = "flex";
     const prompt = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
     const totals = entries.reduce((a,e)=>({kcal:a.kcal+e.kcal,protein:a.protein+e.protein,fat:a.fat+e.fat,carbs:a.carbs+e.carbs,fiber:a.fiber+e.fiber}),{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
-    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г\n\nПриёмы пищи:\n` + entries.map(e=>`- ${e.name}: ${e.kcal} ккал`).join("\n");
+    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г\n\nЗаписи за день:\n${entries.map(e=>`• ${e.name}: ${e.kcal} ккал`).join("\n")}`;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
