@@ -238,7 +238,10 @@ const DEFAULT_PROMPT = `Ты диетолог. Проанализируй пит
 // --- Auth ---
 async function initAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) await sb.auth.signInAnonymously();
+  if (!session) {
+    const { error } = await sb.auth.signInAnonymously();
+    if (error) throw new Error("Auth: " + error.message);
+  }
 }
 
 // --- DB ---
@@ -465,7 +468,9 @@ async function initApp() {
     sendBtn.className = "";
     try {
       const n = await estimateNutrition(text);
-      const { data: { user } } = await sb.auth.getUser();
+      const { data: { session } } = await sb.auth.getSession();
+      const user = session?.user;
+      if (!user) throw new Error("Нет сессии, перезагрузи страницу");
       const entry = {
         id: Date.now(),
         date: TODAY,
