@@ -229,6 +229,14 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
+<div id="key-screen" style="position:fixed;inset:0;background:#0a0a0a;display:none;flex-direction:column;align-items:center;justify-content:center;padding:28px;z-index:150">
+  <div style="font-size:48px;margin-bottom:14px">🔑</div>
+  <h2 style="font-size:18px;font-weight:600;margin-bottom:8px">API ключ Anthropic</h2>
+  <p style="font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:22px">Нужен для оценки калорий через AI.<br>Получи на <a href="https://console.anthropic.com" target="_blank" style="color:#f59e0b">console.anthropic.com</a></p>
+  <input id="key-input" type="text" placeholder="sk-ant-..." style="width:100%;max-width:340px;background:#111;border:1px solid #333;border-radius:12px;padding:12px 16px;color:#f0f0f0;font-size:13px;font-family:monospace;margin-bottom:10px"/>
+  <button id="key-save" style="width:100%;max-width:340px;background:#1a1a1a;color:#444;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600">Сохранить</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const TODAY = new Date().toISOString().split("T")[0];
@@ -590,7 +598,11 @@ async function initApp() {
 
 const keyInput = el("key-input");
 const keySave  = el("key-save");
-keyInput.addEventListener("input", () => { keySave.className = keyInput.value.startsWith("sk-ant")?"ready":""; });
+keyInput.addEventListener("input", () => {
+  const ready = keyInput.value.startsWith("sk-ant") && keyInput.value.length >= 30;
+  keySave.style.background = ready ? "#f59e0b" : "#1a1a1a";
+  keySave.style.color = ready ? "#0a0a0a" : "#444";
+});
 keySave.addEventListener("click", () => {
   const k = keyInput.value.trim();
   if(!k.startsWith("sk-ant")||k.length<30) return;
