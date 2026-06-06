@@ -69,6 +69,20 @@
     <div id="hist-empty" style="display:none">История пуста</div>
   </div>
 
+  <!-- Recipes -->
+  <div id="page-recipes" class="page">
+    <div id="recipes-header">
+      <button id="recipe-new-btn">+ Новый рецепт</button>
+    </div>
+    <div id="recipes-loading" style="display:none">Загрузка...</div>
+    <div id="recipes-empty" style="display:none">
+      <div class="icon">📋</div>
+      <p>Рецепты ещё не добавлены</p>
+      <small>Нажми «+ Новый рецепт» чтобы начать</small>
+    </div>
+    <div id="recipes-content"></div>
+  </div>
+
   <!-- Input bar -->
   <div id="input-bar" class="visible">
     <div id="error-msg"></div>
@@ -85,6 +99,9 @@
     </button>
     <button class="nav-btn" id="nav-history">
       <span class="nav-icon">📅</span>История
+    </button>
+    <button class="nav-btn" id="nav-recipes">
+      <span class="nav-icon">📋</span>Рецепты
     </button>
   </div>
 </div>
@@ -109,6 +126,20 @@
     <div class="modal-btns" style="margin-top:12px">
       <button class="btn-cancel" id="prompt-cancel">Отмена</button>
       <button class="btn-save" id="prompt-save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recipe create modal -->
+<div id="recipe-modal" class="overlay" style="display:none">
+  <div class="modal">
+    <h2>Новый рецепт</h2>
+    <input id="recipe-name-input" type="text" placeholder="Название рецепта"/>
+    <textarea id="recipe-ingr-input" placeholder="Ингредиенты — например: 200г куриной грудки, 100г риса, ложка масла"></textarea>
+    <p id="recipe-modal-error" style="font-size:12px;color:#f87171;margin:6px 0;display:none"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="recipe-cancel">Отмена</button>
+      <button class="btn-save" id="recipe-save">Сохранить</button>
     </div>
   </div>
 </div>

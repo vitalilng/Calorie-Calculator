@@ -12,6 +12,7 @@ let goal = Number(localStorage.getItem("goal")) || 2000;
 let apiKey = localStorage.getItem("anthropic_key") || "";
 let historyCache = null;
 let historyCacheDate = null;
+let recipesCache = null;
 
 const DEFAULT_PROMPT = `Ты диетолог. Проанализируй питание за день и дай краткие рекомендации на русском языке.
 Укажи: баланс макросов, что хорошо, что стоит улучшить, конкретные советы.
@@ -93,6 +94,23 @@ async function dbHistory() {
     .order("date", { ascending: false }).order("id").limit(200);
   if (error) throw new Error(error.message);
   return data;
+}
+
+async function dbLoadRecipes() {
+  const { data, error } = await sb.from("recipes").select("*").order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function dbInsertRecipe(recipe) {
+  const { data, error } = await sb.from("recipes").insert(recipe).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function dbDeleteRecipe(id) {
+  const { error } = await sb.from("recipes").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 // --- Anthropic API ---
@@ -260,6 +278,99 @@ async function renderHistory() {
   }
 }
 
+function renderRecipes(recipes) {
+  el("recipes-loading").style.display = "none";
+  el("recipes-empty").style.display = recipes.length ? "none" : "block";
+  const cont = el("recipes-content");
+  cont.innerHTML = "";
+  recipes.forEach(recipe => {
+    const div = document.createElement("div");
+    div.className = "recipe-card";
+    div.innerHTML = `
+      <div class="recipe-top">
+        <div class="recipe-body">
+          <div class="recipe-name">${esc(recipe.name)}</div>
+          <div class="recipe-ingr">${esc(recipe.ingredients)}</div>
+          <div class="entry-macros">
+            <span style="color:#60a5fa">Б ${recipe.protein}г</span>
+            <span style="color:#f59e0b">Ж ${recipe.fat}г</span>
+            <span style="color:#4ade80">У ${recipe.carbs}г</span>
+            <span style="color:#c084fc">К ${recipe.fiber}г</span>
+          </div>
+        </div>
+        <div class="recipe-right">
+          <div class="recipe-kcal">${recipe.kcal}</div>
+          <button class="del-btn">×</button>
+        </div>
+      </div>
+      <button class="recipe-add-btn">+ Добавить в журнал</button>`;
+
+    div.querySelector(".del-btn").addEventListener("click", async () => {
+      try {
+        await dbDeleteRecipe(recipe.id);
+        recipesCache = recipesCache.filter(r => r.id !== recipe.id);
+        renderRecipes(recipesCache);
+      } catch { showError("Ошибка удаления рецепта"); }
+    });
+
+    const addBtn = div.querySelector(".recipe-add-btn");
+    addBtn.addEventListener("click", async () => {
+      addBtn.disabled = true;
+      addBtn.textContent = "...";
+      try {
+        await addRecipeToToday(recipe);
+        addBtn.textContent = "✓ Добавлено";
+        setTimeout(() => { addBtn.textContent = "+ Добавить в журнал"; addBtn.disabled = false; }, 1500);
+      } catch(e) {
+        addBtn.textContent = "+ Добавить в журнал";
+        addBtn.disabled = false;
+        showError("Ошибка: " + e.message);
+      }
+    });
+
+    cont.appendChild(div);
+  });
+}
+
+async function loadAndRenderRecipes() {
+  if (recipesCache !== null) { renderRecipes(recipesCache); return; }
+  el("recipes-loading").style.display = "block";
+  el("recipes-content").innerHTML = "";
+  el("recipes-empty").style.display = "none";
+  try {
+    recipesCache = await dbLoadRecipes();
+    renderRecipes(recipesCache);
+  } catch { el("recipes-loading").textContent = "Ошибка загрузки"; }
+}
+
+async function addRecipeToToday(recipe) {
+  const today = getToday();
+  const { data: { session } } = await sb.auth.getSession();
+  const entryData = {
+    id: Date.now(),
+    date: today,
+    text: recipe.ingredients,
+    name: recipe.name,
+    time: new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }),
+    kcal: recipe.kcal,
+    protein: recipe.protein,
+    fat: recipe.fat,
+    carbs: recipe.carbs,
+    fiber: recipe.fiber,
+    user_id: session.user.id,
+  };
+  const inserted = await dbInsert(entryData);
+  if (today !== loadedDate) {
+    loadedDate = today;
+    el("date-label").textContent = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+    try { entries = await dbLoad(today); } catch { entries = [inserted]; }
+  } else {
+    entries.push(inserted);
+  }
+  switchTab("today");
+  renderToday();
+}
+
 function switchTab(tab) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -273,7 +384,8 @@ function switchTab(tab) {
     }), { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 }));
   } else {
     el("input-bar").classList.remove("visible");
-    renderHistory();
+    if (tab === "history") renderHistory();
+    else if (tab === "recipes") loadAndRenderRecipes();
   }
 }
 
@@ -358,6 +470,54 @@ async function initApp() {
 
   el("nav-today").addEventListener("click", () => switchTab("today"));
   el("nav-history").addEventListener("click", () => switchTab("history"));
+  el("nav-recipes").addEventListener("click", () => switchTab("recipes"));
+
+  el("recipe-new-btn").addEventListener("click", () => {
+    el("recipe-name-input").value = "";
+    el("recipe-ingr-input").value = "";
+    el("recipe-modal-error").style.display = "none";
+    el("recipe-modal").style.display = "flex";
+  });
+
+  el("recipe-cancel").addEventListener("click", () => { el("recipe-modal").style.display = "none"; });
+
+  el("recipe-save").addEventListener("click", async () => {
+    const name = el("recipe-name-input").value.trim();
+    const ingredients = el("recipe-ingr-input").value.trim();
+    const errEl = el("recipe-modal-error");
+    if (!name) { errEl.textContent = "Введи название рецепта"; errEl.style.display = "block"; return; }
+    if (!ingredients) { errEl.textContent = "Введи ингредиенты"; errEl.style.display = "block"; return; }
+    errEl.style.display = "none";
+
+    const saveBtn = el("recipe-save");
+    saveBtn.textContent = "...";
+    saveBtn.disabled = true;
+
+    try {
+      const n = await estimateNutrition(ingredients);
+      const { data: { session } } = await sb.auth.getSession();
+      const recipeData = {
+        user_id: session.user.id,
+        name,
+        ingredients,
+        kcal: Math.round(n.kcal),
+        protein: Math.round(n.protein),
+        fat: Math.round(n.fat),
+        carbs: Math.round(n.carbs),
+        fiber: Math.round(n.fiber),
+      };
+      const inserted = await dbInsertRecipe(recipeData);
+      recipesCache = recipesCache ? [inserted, ...recipesCache] : [inserted];
+      renderRecipes(recipesCache);
+      el("recipe-modal").style.display = "none";
+    } catch(e) {
+      errEl.textContent = "Ошибка: " + e.message;
+      errEl.style.display = "block";
+    }
+
+    saveBtn.textContent = "Сохранить";
+    saveBtn.disabled = false;
+  });
 
   el("gear-btn").addEventListener("click", () => { el("goal-input").value = goal; el("goal-modal").style.display = "flex"; });
   el("goal-cancel").addEventListener("click", () => { el("goal-modal").style.display = "none"; });
@@ -383,6 +543,7 @@ async function initApp() {
     el("app").style.display = "none";
     entries = [];
     historyCache = null;
+    recipesCache = null;
     appReady = false;
     showAuthScreen();
   });
