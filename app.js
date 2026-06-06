@@ -334,6 +334,7 @@ async function initApp() {
       const user = session?.user;
       if (!user) throw new Error("Нет сессии, перезагрузи страницу");
       const entryData = {
+        id: crypto.randomUUID(),
         date: today,
         text,
         name: n.name || text,
