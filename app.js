@@ -125,6 +125,7 @@ async function estimateNutrition(text) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
+      temperature: 0,
       max_tokens: 1024,
       system: 'Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nEstimate nutrition for: ',
       messages: [{ role: "user", content: text }]
