@@ -127,7 +127,7 @@ async function estimateNutrition(text) {
       model: "claude-haiku-4-5-20251001",
       temperature: 0,
       max_tokens: 1024,
-      system: 'You are a nutrition calculator. The user specifies a food and amount.\nSTEP 1: Find kcal per 100g (or per 100ml for liquids).\nSTEP 2: Multiply by the specified amount.\nSTEP 3: Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nBe precise with the math.'',
+      system: 'You are a nutrition calculator. The user specifies a food and amount.\nSTEP 1: Find kcal per 100g (or per 100ml for liquids).\nSTEP 2: Multiply by the specified amount.\nSTEP 3: Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nBe precise with the math.',
       messages: [{ role: "user", content: text }]
     })
   });
