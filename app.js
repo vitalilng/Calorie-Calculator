@@ -144,7 +144,7 @@ async function estimateNutrition(text) {
   const data = JSON.parse(rawText);
   const raw = data.content?.find(b => b.type === "text")?.text || "{}";
   try {
-    const match = raw.match(/\{[\s\S]*?\}/);
+    console.log("MODEL per 100:", raw, "| multiplier:", multiplier);
     const n = JSON.parse(match ? match[0] : "{}");
     return {
       kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0) * multiplier),
