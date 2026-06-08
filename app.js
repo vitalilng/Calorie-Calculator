@@ -115,6 +115,14 @@ async function dbDeleteRecipe(id) {
 
 // --- Anthropic API ---
 async function estimateNutrition(text) {
+  // Extract amount from text using regex
+  const amountMatch = text.match(/(\d+(?:\.\d+)?)\s*(г|гр|g|мл|ml|л|l|кг|kg)/i);
+  const amount = amountMatch ? parseFloat(amountMatch[1]) : 100;
+  const unit = amountMatch ? amountMatch[2].toLowerCase() : "г";
+  const multiplier = (unit === "кг" || unit === "kg") ? amount * 10
+                   : (unit === "л"  || unit === "l")  ? amount * 10
+                   : amount / 100;
+
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -125,9 +133,9 @@ async function estimateNutrition(text) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      temperature: 0,
       max_tokens: 1024,
-      system: 'You are a nutrition calculator. The user specifies a food and amount.\nSTEP 1: Find kcal per 100g (or per 100ml for liquids).\nSTEP 2: Multiply by the specified amount.\nSTEP 3: Return ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}\nBe precise with the math.',
+      temperature: 0,
+      system: 'Nutrition expert. Return values per 100g or 100ml only. ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}',
       messages: [{ role: "user", content: text }]
     })
   });
@@ -139,11 +147,11 @@ async function estimateNutrition(text) {
     const match = raw.match(/\{[\s\S]*?\}/);
     const n = JSON.parse(match ? match[0] : "{}");
     return {
-      kcal:    Math.max(0, Number(n.kcal)    || 0),
-      protein: Math.max(0, Number(n.protein) || 0),
-      fat:     Math.max(0, Number(n.fat)     || 0),
-      carbs:   Math.max(0, Number(n.carbs)   || 0),
-      fiber:   Math.max(0, Number(n.fiber)   || 0),
+      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0) * multiplier),
+      protein: Math.round(Math.max(0, Number(n.protein) || 0) * multiplier),
+      fat:     Math.round(Math.max(0, Number(n.fat)     || 0) * multiplier),
+      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0) * multiplier),
+      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0) * multiplier),
       name:    String(n.name || text).slice(0, 35),
     };
   } catch { throw new Error("Не удалось разобрать ответ AI"); }
