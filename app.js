@@ -136,7 +136,7 @@ async function estimateNutrition(text) {
       max_tokens: 1024,
       temperature: 0,
       system: 'Nutrition expert. Return values per 100g or 100ml only. ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}',
-      messages: [{ role: "user", content: text }]
+      messages: [{ role: "user", content: text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim() }]
     })
   });
   const rawText = await res.text();
