@@ -115,7 +115,7 @@ async function dbDeleteRecipe(id) {
 
 // --- Anthropic API ---
 async function searchOpenFoodFacts(query) {
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=3&fields=product_name,nutriments`;
+  const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&page_size=3&fields=product_name,nutriments&json=1`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const data = await res.json();
