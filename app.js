@@ -114,15 +114,56 @@ async function dbDeleteRecipe(id) {
 }
 
 // --- Anthropic API ---
+async function searchOpenFoodFacts(query) {
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=3&fields=product_name,nutriments`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const product = data.products?.find(p => {
+    const n = p.nutriments;
+    return n && (n["energy-kcal_100g"] || n["energy_100g"]);
+  });
+  if (!product) return null;
+  const n = product.nutriments;
+  const kcal = n["energy-kcal_100g"] || Math.round((n["energy_100g"] || 0) / 4.184);
+  return {
+    kcal:    Math.round(kcal                        || 0),
+    protein: Math.round(n["proteins_100g"]          || 0),
+    fat:     Math.round(n["fat_100g"]               || 0),
+    carbs:   Math.round(n["carbohydrates_100g"]     || 0),
+    fiber:   Math.round(n["fiber_100g"]             || 0),
+    name:    String(product.product_name            || query).slice(0, 35),
+    source:  "off"
+  };
+}
+
 async function estimateNutrition(text) {
-  // Extract amount from text using regex
   const amountMatch = text.match(/(\d+(?:\.\d+)?)\s*(г|гр|g|мл|ml|л|l|кг|kg)/i);
   const amount = amountMatch ? parseFloat(amountMatch[1]) : 100;
   const unit = amountMatch ? amountMatch[2].toLowerCase() : "г";
   const multiplier = (unit === "кг" || unit === "kg") ? amount * 10
                    : (unit === "л"  || unit === "l")  ? amount * 10
                    : amount / 100;
+  const cleanText = text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim();
 
+  // Try Open Food Facts first
+  try {
+    const off = await searchOpenFoodFacts(cleanText);
+    if (off) {
+      console.log("OFF hit:", off);
+      return {
+        kcal:    Math.round(off.kcal    * multiplier),
+        protein: Math.round(off.protein * multiplier),
+        fat:     Math.round(off.fat     * multiplier),
+        carbs:   Math.round(off.carbs   * multiplier),
+        fiber:   Math.round(off.fiber   * multiplier),
+        name:    off.name,
+      };
+    }
+  } catch(e) { console.log("OFF failed, falling back to AI", e); }
+
+  // Fallback to AI
+  console.log("AI fallback for:", cleanText);
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -136,7 +177,7 @@ async function estimateNutrition(text) {
       max_tokens: 1024,
       temperature: 0,
       system: 'Nutrition expert. Return values per 100g or 100ml only. ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}',
-      messages: [{ role: "user", content: text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim() }]
+      messages: [{ role: "user", content: cleanText }]
     })
   });
   const rawText = await res.text();
@@ -144,7 +185,7 @@ async function estimateNutrition(text) {
   const data = JSON.parse(rawText);
   const raw = data.content?.find(b => b.type === "text")?.text || "{}";
   try {
-    console.log("MODEL per 100:", raw, "| multiplier:", multiplier);
+    const match = raw.match(/\{[\s\S]*?\}/);
     const n = JSON.parse(match ? match[0] : "{}");
     return {
       kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0) * multiplier),
@@ -156,7 +197,6 @@ async function estimateNutrition(text) {
     };
   } catch { throw new Error("Не удалось разобрать ответ AI"); }
 }
-
 // --- DOM ---
 function el(id) { return document.getElementById(id); }
 function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
