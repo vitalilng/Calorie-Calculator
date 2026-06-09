@@ -1,7 +1,7 @@
 function getToday() { return new Date().toISOString().split("T")[0]; }
 
 const SB_URL = "https://qsyssugfcsmpomxyaahw.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEsOYF6GGF7BDlgIn-rzvTBR1kY";
+const SB_KEY = "sb_publishable_zudfpXHorTCV4mTY9jrUwg_GBGhWYk9";
 const sb = window.supabase.createClient(SB_URL, SB_KEY, {
   auth: { persistSession: true, autoRefreshToken: true }
 });
