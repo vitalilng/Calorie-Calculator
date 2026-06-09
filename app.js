@@ -1,7 +1,7 @@
 function getToday() { return new Date().toISOString().split("T")[0]; }
 
 const SB_URL = "https://qsyssugfcsmpomxyaahw.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEsOYF6GGF7BDlgIn-rzvTBR1kY";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzeXNzdWdmY3NtcG9teHlhYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTk5MzcsImV4cCI6MjA5NjEzNTkzN30.t77lfLvyFE3qgtG7AEs[...]";
 const sb = window.supabase.createClient(SB_URL, SB_KEY, {
   auth: { persistSession: true, autoRefreshToken: true }
 });
@@ -146,26 +146,25 @@ async function estimateNutrition(text) {
                    : amount / 100;
   const cleanText = text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim();
 
-  // Try Open Food Facts first
-  try {
-    // Try Open Food Facts only for non-cyrillic queries
-const hasCyrillic = /[а-яёА-ЯЁ]/.test(cleanText);
-if (!hasCyrillic) {
-      try {
-        const off = await searchOpenFoodFacts(cleanText);
-        if (off) {
-          return {
-            kcal:    Math.round(off.kcal    * multiplier),
-            protein: Math.round(off.protein * multiplier),
-            fat:     Math.round(off.fat     * multiplier),
-            carbs:   Math.round(off.carbs   * multiplier),
-            fiber:   Math.round(off.fiber   * multiplier),
-            name:    off.name,
-          };
-        }
-      } catch(e) { console.log("OFF failed, falling back to AI", e); }
-    }
+  // Try Open Food Facts first for non-cyrillic queries
+  const hasCyrillic = /[а-яёА-ЯЁ]/.test(cleanText);
+  if (!hasCyrillic) {
+    try {
+      const off = await searchOpenFoodFacts(cleanText);
+      if (off) {
+        console.log("OFF hit:", off);
+        return {
+          kcal:    Math.round(off.kcal    * multiplier),
+          protein: Math.round(off.protein * multiplier),
+          fat:     Math.round(off.fat     * multiplier),
+          carbs:   Math.round(off.carbs   * multiplier),
+          fiber:   Math.round(off.fiber   * multiplier),
+          name:    off.name,
+        };
+      }
+    } catch(e) { console.log("OFF failed, falling back to AI", e); }
   }
+
   // Fallback to AI
   console.log("AI fallback for:", cleanText);
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -180,7 +179,7 @@ if (!hasCyrillic) {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
       temperature: 0,
-      system: 'Nutrition expert. Return values per 100g or 100ml only. ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian name max 25 chars"}',
+      system: 'Nutrition expert. Return values per 100g or 100ml only. ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"string"}',
       messages: [{ role: "user", content: cleanText }]
     })
   });
@@ -201,6 +200,7 @@ if (!hasCyrillic) {
     };
   } catch { throw new Error("Не удалось разобрать ответ AI"); }
 }
+
 // --- DOM ---
 function el(id) { return document.getElementById(id); }
 function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -363,7 +363,7 @@ function renderRecipes(recipes) {
         await dbDeleteRecipe(recipe.id);
         recipesCache = recipesCache.filter(r => r.id !== recipe.id);
         renderRecipes(recipesCache);
-      } catch { showError("Ошибка удаления рецепта"); }
+      } catch (e) { showError("Ошибка удаления рецепта"); }
     });
 
     const addBtn = div.querySelector(".recipe-add-btn");
@@ -393,7 +393,7 @@ async function loadAndRenderRecipes() {
   try {
     recipesCache = await dbLoadRecipes();
     renderRecipes(recipesCache);
-  } catch { el("recipes-loading").textContent = "Ошибка загрузки"; }
+  } catch (e) { el("recipes-loading").textContent = "Ошибка загрузки"; }
 }
 
 async function addRecipeToToday(recipe) {
