@@ -148,20 +148,24 @@ async function estimateNutrition(text) {
 
   // Try Open Food Facts first
   try {
-    const off = await searchOpenFoodFacts(cleanText);
-    if (off) {
-      console.log("OFF hit:", off);
-      return {
-        kcal:    Math.round(off.kcal    * multiplier),
-        protein: Math.round(off.protein * multiplier),
-        fat:     Math.round(off.fat     * multiplier),
-        carbs:   Math.round(off.carbs   * multiplier),
-        fiber:   Math.round(off.fiber   * multiplier),
-        name:    off.name,
-      };
+    // Try Open Food Facts only for non-cyrillic queries
+const hasCyrillic = /[а-яёА-ЯЁ]/.test(cleanText);
+if (!hasCyrillic) {
+      try {
+        const off = await searchOpenFoodFacts(cleanText);
+        if (off) {
+          return {
+            kcal:    Math.round(off.kcal    * multiplier),
+            protein: Math.round(off.protein * multiplier),
+            fat:     Math.round(off.fat     * multiplier),
+            carbs:   Math.round(off.carbs   * multiplier),
+            fiber:   Math.round(off.fiber   * multiplier),
+            name:    off.name,
+          };
+        }
+      } catch(e) { console.log("OFF failed, falling back to AI", e); }
     }
-  } catch(e) { console.log("OFF failed, falling back to AI", e); }
-
+  }
   // Fallback to AI
   console.log("AI fallback for:", cleanText);
   const res = await fetch("https://api.anthropic.com/v1/messages", {
