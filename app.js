@@ -283,11 +283,19 @@ function displayHistoryRows(rows) {
 
     const block = document.createElement("div");
     block.className = "day-block";
-    block.innerHTML = `
-      <div class="day-header">
-        <span class="day-title">${esc(label)}</span>
+
+    const header = document.createElement("div");
+    header.className = "day-header";
+    header.innerHTML = `
+      <span class="day-title">${esc(label)}</span>
+      <span class="day-header-right">
         <span class="day-kcal">${totalKcal} ккал</span>
-      </div>`;
+        <span class="day-chevron">▾</span>
+      </span>`;
+    block.appendChild(header);
+
+    const entriesWrap = document.createElement("div");
+    entriesWrap.className = "day-entries";
     dayEntries.forEach(entry => {
       const div = document.createElement("div");
       div.className = "entry";
@@ -305,8 +313,15 @@ function displayHistoryRows(rows) {
           <div class="entry-kcal">${entry.kcal}</div>
           <div class="entry-time">${entry.time}</div>
         </div>`;
-      block.appendChild(div);
+      entriesWrap.appendChild(div);
     });
+    block.appendChild(entriesWrap);
+
+    header.addEventListener("click", () => {
+      const open = entriesWrap.classList.toggle("open");
+      header.querySelector(".day-chevron").textContent = open ? "▴" : "▾";
+    });
+
     cont.appendChild(block);
   });
   cont.style.display = "block";
