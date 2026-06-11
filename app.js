@@ -179,8 +179,8 @@ async function estimateNutrition(text) {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
       temperature: 0,
-      system: 'Nutrition expert. Return values per 100g or 100ml only. ONLY compact JSON, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"string"}',
-      messages: [{ role: "user", content: cleanText }]
+      system: 'You are a precise nutrition calculator. For the given food or dish:\n1. Break it into individual ingredients with their amounts\n2. Calculate kcal, protein, fat, carbs, fiber for each ingredient\n3. Sum everything up\n4. Return ONLY compact JSON with total values, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian dish name max 25 chars"}\nIf no amount specified, assume 1 standard serving.',
+      messages: [{ role: "user", content: text }]
     })
   });
   const rawText = await res.text();
@@ -191,11 +191,11 @@ async function estimateNutrition(text) {
     const match = raw.match(/\{[\s\S]*?\}/);
     const n = JSON.parse(match ? match[0] : "{}");
     return {
-      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0) * multiplier),
-      protein: Math.round(Math.max(0, Number(n.protein) || 0) * multiplier),
-      fat:     Math.round(Math.max(0, Number(n.fat)     || 0) * multiplier),
-      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0) * multiplier),
-      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0) * multiplier),
+      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0)),
+      protein: Math.round(Math.max(0, Number(n.protein) || 0)),
+      fat:     Math.round(Math.max(0, Number(n.fat)     || 0)),
+      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0)),
+      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0)),
       name:    String(n.name || text).slice(0, 35),
     };
   } catch { throw new Error("Не удалось разобрать ответ AI"); }
