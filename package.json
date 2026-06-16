@@ -1,11 +1,19 @@
+<<<<<<< Updated upstream
 ﻿{
+=======
+{
+>>>>>>> Stashed changes
   "name": "calorie-calculator",
   "version": "1.0.0",
   "description": "Calorie tracking app",
   "scripts": {
     "lint": "eslint app.js",
     "lint:all": "eslint *.js",
+<<<<<<< Updated upstream
     "validate": "eslint app.js && echo No errors found."
+=======
+    "validate": "eslint app.js && echo \"No errors found.\""
+>>>>>>> Stashed changes
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
