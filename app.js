@@ -118,25 +118,37 @@ async function dbDeleteRecipe(id) {
 
 // --- Anthropic API ---
 async function searchOpenFoodFacts(query) {
-  const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&page_size=3&fields=product_name,nutriments&json=1`;
-  const res = await fetch(url);
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token || SB_KEY;
+
+  const res = await fetch("https://qsyssugfcsmpomxyaahw.supabase.co/functions/v1/food-search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token,
+    },
+    body: JSON.stringify({ query })
+  });
+
   if (!res.ok) return null;
   const data = await res.json();
+
   const product = data.products?.find(p => {
     const n = p.nutriments;
     return n && (n["energy-kcal_100g"] || n["energy_100g"]);
   });
+
   if (!product) return null;
   const n = product.nutriments;
   const kcal = n["energy-kcal_100g"] || Math.round((n["energy_100g"] || 0) / 4.184);
+
   return {
-    kcal:    Math.round(kcal                        || 0),
-    protein: Math.round(n["proteins_100g"]          || 0),
-    fat:     Math.round(n["fat_100g"]               || 0),
-    carbs:   Math.round(n["carbohydrates_100g"]     || 0),
-    fiber:   Math.round(n["fiber_100g"]             || 0),
-    name:    String(product.product_name            || query).slice(0, 35),
-    source:  "off"
+    kcal:    Math.round(kcal                    || 0),
+    protein: Math.round(n["proteins_100g"]      || 0),
+    fat:     Math.round(n["fat_100g"]           || 0),
+    carbs:   Math.round(n["carbohydrates_100g"] || 0),
+    fiber:   Math.round(n["fiber_100g"]         || 0),
+    name:    String(product.product_name        || query).slice(0, 35),
   };
 }
 
