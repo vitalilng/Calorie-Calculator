@@ -1,4 +1,4 @@
-﻿function getToday() { return new Date().toISOString().split("T")[0]; }
+function getToday() { return new Date().toISOString().split("T")[0]; }
 
 const SB_URL = "https://qsyssugfcsmpomxyaahw.supabase.co";
 const SB_KEY = "sb_publishable_zudfpXHorTCV4mTY9jrUwg_GBGhWYk9";
@@ -116,7 +116,7 @@ async function dbDeleteRecipe(id) {
   if (error) throw new Error(error.message);
 }
 
-// --- Anthropic API ---
+// --- Food lookup ---
 async function searchOpenFoodFacts(query) {
   const { data: { session } } = await sb.auth.getSession();
   const token = session?.access_token || SB_KEY;
@@ -164,7 +164,7 @@ async function estimateNutrition(text) {
     ? text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim()
     : text;
 
-  // OFF только для латиницы с весом
+  // OFF only for latin text with a known weight
   const hasCyrillic = /[а-яёА-ЯЁ]/.test(cleanText);
   if (!hasCyrillic && multiplier !== null) {
     try {
@@ -182,11 +182,7 @@ async function estimateNutrition(text) {
     } catch(e) { /* fall through to AI */ }
   }
 
-<<<<<<< Updated upstream
-  // AI — всегда получает оригинальный text, считает итог сам
-=======
-  // Fallback to AI
->>>>>>> Stashed changes
+  // AI fallback — sends original text, AI calculates totals
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -232,17 +228,10 @@ function sumEntries(arr) {
   }), { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 });
 }
 function macrosHtml(e) {
-<<<<<<< Updated upstream
   return "<span style=\"color:#60a5fa\">Б " + e.protein + "г</span>" +
          "<span style=\"color:#f59e0b\">Ж " + e.fat + "г</span>" +
          "<span style=\"color:#4ade80\">У " + e.carbs + "г</span>" +
          "<span style=\"color:#c084fc\">К " + e.fiber + "г</span>";
-=======
-  return `<span style="color:#60a5fa">Б ${e.protein}г</span>
-          <span style="color:#f59e0b">Ж ${e.fat}г</span>
-          <span style="color:#4ade80">У ${e.carbs}г</span>
-          <span style="color:#c084fc">К ${e.fiber}г</span>`;
->>>>>>> Stashed changes
 }
 
 function renderToday() {
@@ -256,7 +245,6 @@ function renderToday() {
     const div = document.createElement("div");
     div.className = "entry";
     const diff = entry.text.toLowerCase() !== (entry.name || "").toLowerCase();
-<<<<<<< Updated upstream
     div.innerHTML =
       "<div class=\"entry-body\">" +
         "<div class=\"entry-name\">" + esc(entry.name || entry.text) + "</div>" +
@@ -268,19 +256,6 @@ function renderToday() {
         "<div class=\"entry-time\">" + entry.time + "</div>" +
       "</div>" +
       "<button class=\"del-btn\" data-id=\"" + entry.id + "\">×</button>";
-=======
-    div.innerHTML = `
-      <div class="entry-body">
-        <div class="entry-name">${esc(entry.name || entry.text)}</div>
-        ${diff ? `<div class="entry-raw">${esc(entry.text)}</div>` : ""}
-        <div class="entry-macros">${macrosHtml(entry)}</div>
-      </div>
-      <div class="entry-right">
-        <div class="entry-kcal">${entry.kcal}</div>
-        <div class="entry-time">${entry.time}</div>
-      </div>
-      <button class="del-btn" data-id="${entry.id}">×</button>`;
->>>>>>> Stashed changes
     div.querySelector(".del-btn").addEventListener("click", async () => {
       try {
         await dbDelete(entry.id);
@@ -344,7 +319,6 @@ function displayHistoryRows(rows) {
     dayEntries.forEach(entry => {
       const div = document.createElement("div");
       div.className = "entry";
-<<<<<<< Updated upstream
       div.innerHTML =
         "<div class=\"entry-body\">" +
           "<div class=\"entry-name\">" + esc(entry.name || entry.text) + "</div>" +
@@ -354,17 +328,6 @@ function displayHistoryRows(rows) {
           "<div class=\"entry-kcal\">" + entry.kcal + "</div>" +
           "<div class=\"entry-time\">" + entry.time + "</div>" +
         "</div>";
-=======
-      div.innerHTML = `
-        <div class="entry-body">
-          <div class="entry-name">${esc(entry.name || entry.text)}</div>
-          <div class="entry-macros">${macrosHtml(entry)}</div>
-        </div>
-        <div class="entry-right">
-          <div class="entry-kcal">${entry.kcal}</div>
-          <div class="entry-time">${entry.time}</div>
-        </div>`;
->>>>>>> Stashed changes
       entriesWrap.appendChild(div);
     });
     block.appendChild(entriesWrap);
@@ -406,7 +369,6 @@ function renderRecipes(recipes) {
   recipes.forEach(recipe => {
     const div = document.createElement("div");
     div.className = "recipe-card";
-<<<<<<< Updated upstream
     div.innerHTML =
       "<div class=\"recipe-top\">" +
         "<div class=\"recipe-body\">" +
@@ -420,21 +382,6 @@ function renderRecipes(recipes) {
         "</div>" +
       "</div>" +
       "<button class=\"recipe-add-btn\">+ Добавить в журнал</button>";
-=======
-    div.innerHTML = `
-      <div class="recipe-top">
-        <div class="recipe-body">
-          <div class="recipe-name">${esc(recipe.name)}</div>
-          <div class="recipe-ingr">${esc(recipe.ingredients)}</div>
-          <div class="entry-macros">${macrosHtml(recipe)}</div>
-        </div>
-        <div class="recipe-right">
-          <div class="recipe-kcal">${recipe.kcal}</div>
-          <button class="del-btn">×</button>
-        </div>
-      </div>
-      <button class="recipe-add-btn">+ Добавить в журнал</button>`;
->>>>>>> Stashed changes
 
     div.querySelector(".del-btn").addEventListener("click", async () => {
       try {
@@ -675,10 +622,6 @@ async function initApp() {
     showAuthScreen();
   });
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
   // --- Analysis ---
   el("analyze-btn").addEventListener("click", async () => {
     el("analysis-modal").style.display = "flex";
@@ -689,11 +632,7 @@ async function initApp() {
     el("analysis-result").textContent = "Анализирую...";
     const prompt = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
     const totals = sumEntries(entries);
-<<<<<<< Updated upstream
     const summary = "Цель: " + goal + " ккал\nСъедено: " + totals.kcal + " ккал | Белки: " + totals.protein + "г | Жиры: " + totals.fat + "г | Углеводы: " + totals.carbs + "г | Клетчатка: " + totals.fiber + "г";
-=======
-    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г`;
->>>>>>> Stashed changes
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
