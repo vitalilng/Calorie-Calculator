@@ -1,0 +1,15 @@
+﻿{
+  "name": "calorie-calculator",
+  "version": "1.0.0",
+  "description": "Calorie tracking app",
+  "scripts": {
+    "lint": "eslint app.js",
+    "lint:all": "eslint *.js",
+    "validate": "eslint app.js && echo No errors found."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  }
+}

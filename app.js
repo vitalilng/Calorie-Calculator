@@ -1,4 +1,4 @@
-function getToday() { return new Date().toISOString().split("T")[0]; }
+﻿function getToday() { return new Date().toISOString().split("T")[0]; }
 
 const SB_URL = "https://qsyssugfcsmpomxyaahw.supabase.co";
 const SB_KEY = "sb_publishable_zudfpXHorTCV4mTY9jrUwg_GBGhWYk9";
@@ -170,7 +170,6 @@ async function estimateNutrition(text) {
     try {
       const off = await searchOpenFoodFacts(cleanText);
       if (off) {
-        console.log("OFF hit:", off);
         return {
           kcal:    Math.round(off.kcal    * multiplier),
           protein: Math.round(off.protein * multiplier),
@@ -180,7 +179,7 @@ async function estimateNutrition(text) {
           name:    off.name,
         };
       }
-    } catch(e) { console.log("OFF failed:", e); }
+    } catch(e) { /* fall through to AI */ }
   }
 
   // AI — всегда получает оригинальный text, считает итог сам
@@ -218,112 +217,45 @@ async function estimateNutrition(text) {
   } catch { throw new Error("Не удалось разобрать ответ AI"); }
 }
 
-  // AI — всегда получает оригинальный text, считает итог сам
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      temperature: 0,
-      system: 'You are a precise nutrition calculator. For the given food or dish:\n1. Break it into individual ingredients with their amounts\n2. Calculate kcal, protein, fat, carbs, fiber for each ingredient\n3. Sum everything up\n4. Return ONLY compact JSON with total values, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian dish name max 25 chars"}\nIf no amount specified, assume 1 standard serving. Input can be in any language (Russian, English, Romanian or other) — always respond in JSON only.',
-      messages: [{ role: "user", content: text }]
-    })
-  });
-  const rawText = await res.text();
-  if (!res.ok) throw new Error("API " + res.status + ": " + rawText.slice(0, 100));
-  const data = JSON.parse(rawText);
-  const raw = data.content?.find(b => b.type === "text")?.text || "{}";
-  try {
-    const match = raw.match(/\{[\s\S]*?\}/);
-    const n = JSON.parse(match ? match[0] : "{}");
-    return {
-      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0)),
-      protein: Math.round(Math.max(0, Number(n.protein) || 0)),
-      fat:     Math.round(Math.max(0, Number(n.fat)     || 0)),
-      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0)),
-      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0)),
-      name:    String(n.name || text).slice(0, 35),
-    };
-  } catch { throw new Error("Не удалось разобрать ответ AI"); }
-}
-
-  // Fallback to AI
-  console.log("AI fallback for:", cleanText);
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      temperature: 0,
-      system: 'You are a precise nutrition calculator. For the given food or dish:\n1. Break it into individual ingredients with their amounts\n2. Calculate kcal, protein, fat, carbs, fiber for each ingredient\n3. Sum everything up\n4. Return ONLY compact JSON with total values, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian dish name max 25 chars"}\nIf no amount specified, assume 1 standard serving.',
-      messages: [{ role: "user", content: text }]
-    })
-  });
-  const rawText = await res.text();
-  if (!res.ok) throw new Error("API " + res.status + ": " + rawText.slice(0, 100));
-  const data = JSON.parse(rawText);
-  const raw = data.content?.find(b => b.type === "text")?.text || "{}";
-  try {
-    const match = raw.match(/\{[\s\S]*?\}/);
-    const n = JSON.parse(match ? match[0] : "{}");
-    return {
-      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0)),
-      protein: Math.round(Math.max(0, Number(n.protein) || 0)),
-      fat:     Math.round(Math.max(0, Number(n.fat)     || 0)),
-      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0)),
-      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0)),
-      name:    String(n.name || text).slice(0, 35),
-    };
-  } catch { throw new Error("Не удалось разобрать ответ AI"); }
-}
-
 // --- DOM ---
 function el(id) { return document.getElementById(id); }
 function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function showError(msg) { const e = el("error-msg"); e.textContent = msg; e.style.display = msg ? "block" : "none"; }
+function sumEntries(arr) {
+  return arr.reduce((a, e) => ({
+    kcal: a.kcal + e.kcal, protein: a.protein + e.protein,
+    fat: a.fat + e.fat, carbs: a.carbs + e.carbs, fiber: a.fiber + e.fiber
+  }), { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 });
+}
+function macrosHtml(e) {
+  return "<span style=\"color:#60a5fa\">Б " + e.protein + "г</span>" +
+         "<span style=\"color:#f59e0b\">Ж " + e.fat + "г</span>" +
+         "<span style=\"color:#4ade80\">У " + e.carbs + "г</span>" +
+         "<span style=\"color:#c084fc\">К " + e.fiber + "г</span>";
+}
 
 function renderToday() {
   const list = el("page-today");
   list.querySelectorAll(".entry").forEach(e => e.remove());
   el("empty").style.display = entries.length ? "none" : "block";
 
-  const totals = entries.reduce((a, e) => ({
-    kcal: a.kcal + e.kcal, protein: a.protein + e.protein,
-    fat: a.fat + e.fat, carbs: a.carbs + e.carbs, fiber: a.fiber + e.fiber
-  }), { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 });
+  const totals = sumEntries(entries);
 
   entries.forEach(entry => {
     const div = document.createElement("div");
     div.className = "entry";
     const diff = entry.text.toLowerCase() !== (entry.name || "").toLowerCase();
-    div.innerHTML = `
-      <div class="entry-body">
-        <div class="entry-name">${esc(entry.name || entry.text)}</div>
-        ${diff ? `<div class="entry-raw">${esc(entry.text)}</div>` : ""}
-        <div class="entry-macros">
-          <span style="color:#60a5fa">Б ${entry.protein}г</span>
-          <span style="color:#f59e0b">Ж ${entry.fat}г</span>
-          <span style="color:#4ade80">У ${entry.carbs}г</span>
-          <span style="color:#c084fc">К ${entry.fiber}г</span>
-        </div>
-      </div>
-      <div class="entry-right">
-        <div class="entry-kcal">${entry.kcal}</div>
-        <div class="entry-time">${entry.time}</div>
-      </div>
-      <button class="del-btn" data-id="${entry.id}">×</button>`;
+    div.innerHTML =
+      "<div class=\"entry-body\">" +
+        "<div class=\"entry-name\">" + esc(entry.name || entry.text) + "</div>" +
+        (diff ? "<div class=\"entry-raw\">" + esc(entry.text) + "</div>" : "") +
+        "<div class=\"entry-macros\">" + macrosHtml(entry) + "</div>" +
+      "</div>" +
+      "<div class=\"entry-right\">" +
+        "<div class=\"entry-kcal\">" + entry.kcal + "</div>" +
+        "<div class=\"entry-time\">" + entry.time + "</div>" +
+      "</div>" +
+      "<button class=\"del-btn\" data-id=\"" + entry.id + "\">×</button>";
     div.querySelector(".del-btn").addEventListener("click", async () => {
       try {
         await dbDelete(entry.id);
@@ -342,7 +274,7 @@ function updateHeader(totals) {
   const remaining = goal - totals.kcal;
   const over = remaining < 0;
   el("kcal-num").textContent = totals.kcal;
-  el("remaining").textContent = over ? `+${Math.abs(remaining)} перебор` : `−${remaining} осталось`;
+  el("remaining").textContent = over ? "+" + Math.abs(remaining) + " перебор" : "−" + remaining + " осталось";
   el("remaining").style.color = over ? "#f87171" : "#4ade80";
   el("prog-fill").style.width = progress + "%";
   el("prog-fill").style.background = progress > 95 ? "#f87171" : progress > 75 ? "#fb923c" : "#f59e0b";
@@ -374,12 +306,12 @@ function displayHistoryRows(rows) {
 
     const header = document.createElement("div");
     header.className = "day-header";
-    header.innerHTML = `
-      <span class="day-title">${esc(label)}</span>
-      <span class="day-header-right">
-        <span class="day-kcal">${totalKcal} ккал</span>
-        <span class="day-chevron">▾</span>
-      </span>`;
+    header.innerHTML =
+      "<span class=\"day-title\">" + esc(label) + "</span>" +
+      "<span class=\"day-header-right\">" +
+        "<span class=\"day-kcal\">" + totalKcal + " ккал</span>" +
+        "<span class=\"day-chevron\">▾</span>" +
+      "</span>";
     block.appendChild(header);
 
     const entriesWrap = document.createElement("div");
@@ -387,20 +319,15 @@ function displayHistoryRows(rows) {
     dayEntries.forEach(entry => {
       const div = document.createElement("div");
       div.className = "entry";
-      div.innerHTML = `
-        <div class="entry-body">
-          <div class="entry-name">${esc(entry.name || entry.text)}</div>
-          <div class="entry-macros">
-            <span style="color:#60a5fa">Б ${entry.protein}г</span>
-            <span style="color:#f59e0b">Ж ${entry.fat}г</span>
-            <span style="color:#4ade80">У ${entry.carbs}г</span>
-            <span style="color:#c084fc">К ${entry.fiber}г</span>
-          </div>
-        </div>
-        <div class="entry-right">
-          <div class="entry-kcal">${entry.kcal}</div>
-          <div class="entry-time">${entry.time}</div>
-        </div>`;
+      div.innerHTML =
+        "<div class=\"entry-body\">" +
+          "<div class=\"entry-name\">" + esc(entry.name || entry.text) + "</div>" +
+          "<div class=\"entry-macros\">" + macrosHtml(entry) + "</div>" +
+        "</div>" +
+        "<div class=\"entry-right\">" +
+          "<div class=\"entry-kcal\">" + entry.kcal + "</div>" +
+          "<div class=\"entry-time\">" + entry.time + "</div>" +
+        "</div>";
       entriesWrap.appendChild(div);
     });
     block.appendChild(entriesWrap);
@@ -442,24 +369,19 @@ function renderRecipes(recipes) {
   recipes.forEach(recipe => {
     const div = document.createElement("div");
     div.className = "recipe-card";
-    div.innerHTML = `
-      <div class="recipe-top">
-        <div class="recipe-body">
-          <div class="recipe-name">${esc(recipe.name)}</div>
-          <div class="recipe-ingr">${esc(recipe.ingredients)}</div>
-          <div class="entry-macros">
-            <span style="color:#60a5fa">Б ${recipe.protein}г</span>
-            <span style="color:#f59e0b">Ж ${recipe.fat}г</span>
-            <span style="color:#4ade80">У ${recipe.carbs}г</span>
-            <span style="color:#c084fc">К ${recipe.fiber}г</span>
-          </div>
-        </div>
-        <div class="recipe-right">
-          <div class="recipe-kcal">${recipe.kcal}</div>
-          <button class="del-btn">×</button>
-        </div>
-      </div>
-      <button class="recipe-add-btn">+ Добавить в журнал</button>`;
+    div.innerHTML =
+      "<div class=\"recipe-top\">" +
+        "<div class=\"recipe-body\">" +
+          "<div class=\"recipe-name\">" + esc(recipe.name) + "</div>" +
+          "<div class=\"recipe-ingr\">" + esc(recipe.ingredients) + "</div>" +
+          "<div class=\"entry-macros\">" + macrosHtml(recipe) + "</div>" +
+        "</div>" +
+        "<div class=\"recipe-right\">" +
+          "<div class=\"recipe-kcal\">" + recipe.kcal + "</div>" +
+          "<button class=\"del-btn\">×</button>" +
+        "</div>" +
+      "</div>" +
+      "<button class=\"recipe-add-btn\">+ Добавить в журнал</button>";
 
     div.querySelector(".del-btn").addEventListener("click", async () => {
       try {
@@ -503,7 +425,6 @@ async function addRecipeToToday(recipe) {
   const today = getToday();
   const { data: { session } } = await sb.auth.getSession();
   const entryData = {
-    id: Date.now(),
     date: today,
     text: recipe.ingredients,
     name: recipe.name,
@@ -519,6 +440,7 @@ async function addRecipeToToday(recipe) {
   if (today !== loadedDate) {
     loadedDate = today;
     el("date-label").textContent = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+    historyCache = null;
     try { entries = await dbLoad(today); } catch { entries = [inserted]; }
   } else {
     entries.push(inserted);
@@ -534,10 +456,7 @@ function switchTab(tab) {
   el("nav-" + tab).classList.add("active");
   if (tab === "today") {
     el("input-bar").classList.add("visible");
-    updateHeader(entries.reduce((a, e) => ({
-      kcal: a.kcal + e.kcal, protein: a.protein + e.protein,
-      fat: a.fat + e.fat, carbs: a.carbs + e.carbs, fiber: a.fiber + e.fiber
-    }), { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 }));
+    updateHeader(sumEntries(entries));
   } else {
     el("input-bar").classList.remove("visible");
     if (tab === "history") renderHistory();
@@ -594,7 +513,7 @@ async function initApp() {
 
     showError("");
     sendBtn.disabled = true;
-    sendBtn.innerHTML = '<span class="spinner">◌</span>';
+    sendBtn.innerHTML = "<span class=\"spinner\">◌</span>";
     sendBtn.classList.remove("ready");
     try {
       const n = await estimateNutrition(text);
@@ -602,7 +521,6 @@ async function initApp() {
       const user = session?.user;
       if (!user) throw new Error("Нет сессии, перезагрузи страницу");
       const entryData = {
-        id: Date.now(),
         date: today,
         text,
         name: n.name || text,
@@ -704,18 +622,6 @@ async function initApp() {
     showAuthScreen();
   });
 
-  document.addEventListener("visibilitychange", async () => {
-    if (document.hidden) return;
-    const today = getToday();
-    if (today !== loadedDate) {
-      loadedDate = today;
-      el("date-label").textContent = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
-      historyCache = null;
-      try { entries = await dbLoad(today); } catch { entries = []; }
-      renderToday();
-    }
-  });
-
   // --- Analysis ---
   el("analyze-btn").addEventListener("click", async () => {
     el("analysis-modal").style.display = "flex";
@@ -725,11 +631,8 @@ async function initApp() {
     }
     el("analysis-result").textContent = "Анализирую...";
     const prompt = localStorage.getItem("analysis_prompt") || DEFAULT_PROMPT;
-    const totals = entries.reduce((a, e) => ({
-      kcal: a.kcal + e.kcal, protein: a.protein + e.protein,
-      fat: a.fat + e.fat, carbs: a.carbs + e.carbs, fiber: a.fiber + e.fiber
-    }), { kcal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 });
-    const summary = `Цель: ${goal} ккал\nСъедено: ${totals.kcal} ккал | Белки: ${totals.protein}г | Жиры: ${totals.fat}г | Углеводы: ${totals.carbs}г | Клетчатка: ${totals.fiber}г`;
+    const totals = sumEntries(entries);
+    const summary = "Цель: " + goal + " ккал\nСъедено: " + totals.kcal + " ккал | Белки: " + totals.protein + "г | Жиры: " + totals.fat + "г | Углеводы: " + totals.carbs + "г | Клетчатка: " + totals.fiber + "г";
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -770,6 +673,18 @@ keySave.addEventListener("click", () => {
   localStorage.setItem("anthropic_key", k);
   el("key-screen").style.display = "none";
   if (!appReady) initApp();
+});
+
+document.addEventListener("visibilitychange", async () => {
+  if (document.hidden || !appReady) return;
+  const today = getToday();
+  if (today !== loadedDate) {
+    loadedDate = today;
+    el("date-label").textContent = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+    historyCache = null;
+    try { entries = await dbLoad(today); } catch { entries = []; }
+    renderToday();
+  }
 });
 
 // --- Startup ---
