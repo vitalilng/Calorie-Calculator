@@ -218,6 +218,41 @@ async function estimateNutrition(text) {
   } catch { throw new Error("Не удалось разобрать ответ AI"); }
 }
 
+  // AI — всегда получает оригинальный text, считает итог сам
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      temperature: 0,
+      system: 'You are a precise nutrition calculator. For the given food or dish:\n1. Break it into individual ingredients with their amounts\n2. Calculate kcal, protein, fat, carbs, fiber for each ingredient\n3. Sum everything up\n4. Return ONLY compact JSON with total values, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian dish name max 25 chars"}\nIf no amount specified, assume 1 standard serving. Input can be in any language (Russian, English, Romanian or other) — always respond in JSON only.',
+      messages: [{ role: "user", content: text }]
+    })
+  });
+  const rawText = await res.text();
+  if (!res.ok) throw new Error("API " + res.status + ": " + rawText.slice(0, 100));
+  const data = JSON.parse(rawText);
+  const raw = data.content?.find(b => b.type === "text")?.text || "{}";
+  try {
+    const match = raw.match(/\{[\s\S]*?\}/);
+    const n = JSON.parse(match ? match[0] : "{}");
+    return {
+      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0)),
+      protein: Math.round(Math.max(0, Number(n.protein) || 0)),
+      fat:     Math.round(Math.max(0, Number(n.fat)     || 0)),
+      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0)),
+      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0)),
+      name:    String(n.name || text).slice(0, 35),
+    };
+  } catch { throw new Error("Не удалось разобрать ответ AI"); }
+}
+
   // Fallback to AI
   console.log("AI fallback for:", cleanText);
   const res = await fetch("https://api.anthropic.com/v1/messages", {
