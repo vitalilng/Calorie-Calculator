@@ -153,17 +153,20 @@ async function searchOpenFoodFacts(query) {
 }
 
 async function estimateNutrition(text) {
-  const amountMatch = text.match(/(\d+(?:\.\d+)?)\s*(г|гр|g|мл|ml|л|l|кг|kg)/i);
-  const amount = amountMatch ? parseFloat(amountMatch[1]) : 100;
-  const unit = amountMatch ? amountMatch[2].toLowerCase() : "г";
-  const multiplier = (unit === "кг" || unit === "kg") ? amount * 10
-                   : (unit === "л"  || unit === "l")  ? amount * 10
-                   : amount / 100;
-  const cleanText = text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim();
+  const weightMatch = text.match(/(\d+(?:\.\d+)?)\s*(г|гр|g|мл|ml|л|l|кг|kg)/i);
+  const multiplier = weightMatch
+    ? (["кг","kg","л","l"].includes(weightMatch[2].toLowerCase())
+        ? parseFloat(weightMatch[1]) * 10
+        : parseFloat(weightMatch[1]) / 100)
+    : null;
 
-  // Try Open Food Facts first for non-cyrillic queries
+  const cleanText = weightMatch
+    ? text.replace(/\d+(?:\.\d+)?\s*(г|гр|g|мл|ml|л|l|кг|kg)/gi, "").trim()
+    : text;
+
+  // OFF только для латиницы с весом
   const hasCyrillic = /[а-яёА-ЯЁ]/.test(cleanText);
-  if (!hasCyrillic) {
+  if (!hasCyrillic && multiplier !== null) {
     try {
       const off = await searchOpenFoodFacts(cleanText);
       if (off) {
@@ -177,8 +180,43 @@ async function estimateNutrition(text) {
           name:    off.name,
         };
       }
-    } catch(e) { console.log("OFF failed, falling back to AI", e); }
+    } catch(e) { console.log("OFF failed:", e); }
   }
+
+  // AI — всегда получает оригинальный text, считает итог сам
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      temperature: 0,
+      system: 'You are a precise nutrition calculator. For the given food or dish:\n1. Break it into individual ingredients with their amounts\n2. Calculate kcal, protein, fat, carbs, fiber for each ingredient\n3. Sum everything up\n4. Return ONLY compact JSON with total values, no spaces, no markdown:\n{"kcal":number,"protein":number,"fat":number,"carbs":number,"fiber":number,"name":"Russian dish name max 25 chars"}\nIf no amount specified, assume 1 standard serving. Input can be in any language (Russian, English, Romanian or other) — always respond in JSON only.',
+      messages: [{ role: "user", content: text }]
+    })
+  });
+  const rawText = await res.text();
+  if (!res.ok) throw new Error("API " + res.status + ": " + rawText.slice(0, 100));
+  const data = JSON.parse(rawText);
+  const raw = data.content?.find(b => b.type === "text")?.text || "{}";
+  try {
+    const match = raw.match(/\{[\s\S]*?\}/);
+    const n = JSON.parse(match ? match[0] : "{}");
+    return {
+      kcal:    Math.round(Math.max(0, Number(n.kcal)    || 0)),
+      protein: Math.round(Math.max(0, Number(n.protein) || 0)),
+      fat:     Math.round(Math.max(0, Number(n.fat)     || 0)),
+      carbs:   Math.round(Math.max(0, Number(n.carbs)   || 0)),
+      fiber:   Math.round(Math.max(0, Number(n.fiber)   || 0)),
+      name:    String(n.name || text).slice(0, 35),
+    };
+  } catch { throw new Error("Не удалось разобрать ответ AI"); }
+}
 
   // Fallback to AI
   console.log("AI fallback for:", cleanText);
